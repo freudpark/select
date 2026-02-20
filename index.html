@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>🗺️ 보물찾기</title>
+  <script src="https://openfpcdn.io/fingerprintjs/v4/esm.min.js" type="module"></script>
+
+  <!-- Firebase SDK (CDN) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, runTransaction, updateDoc, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import FingerprintJS from "https://openfpcdn.io/fingerprintjs/v4/esm.min.js";
+
+    // ============================
+    // 🔧 Firebase 설정 (본인 프로젝트로 교체)
+    // ============================
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+    };
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // ============================
+    // 🗺️ 보물 설정 (loc 파라미터 → 보물 유무)
+    // ============================
+    const TREASURE_MAP = {
+      "A1": { hasTreasure: true,  maxWinners: 1 },
+      "B2": { hasTreasure: true,  maxWinners: 1 },
+      "C3": { hasTreasure: false, maxWinners: 0 },
+      "D4": { hasTreasure: false, maxWinners: 0 },
+      // 필요시 추가
+    };
+
+    // URL 파라미터에서 위치 ID 추출
+    const locationId = new URLSearchParams(window.location.search).get("loc") || "default";
+    const config     = TREASURE_MAP[locationId] || { hasTreasure: false, maxWinners: 0 };
+
+    // ============================
+    // 🍪 쿠키 유틸
+    // ============================
+    const getCookie = (name) => document.cookie.split(";").some(c => c.trim().startsWith(name + "="));
+    const setCookie = (name, val, days) => {
+      const d = new Date();
+      d.setTime(d.getTime() + days * 86400000);
+      document.cookie = `${name}=${val};expires=${d.toUTCString()};path=/;SameSite=Strict`;
+    };
+
+    // ============================
+    // 📱 전화번호 포맷
+    // ============================
+    window.formatPhone = (input) => {
+      let v = input.value.replace(/\D/g, "");
+      if (v.length >= 7) v = v.slice(0,3)+"-"+v.slice(3,7)+"-"+v.slice(7,11);
+      else if (v.length >= 4) v = v.slice(0,3)+"-"+v.slice(3);
+      input.value = v;
+    };
+
+    // ============================
+    // 🔍 보물 찾기 메인 로직
+    // ============================
+    window.findTreasure = async () => {
+      const btn    = document.getElementById("find-btn");
+      const loader = document.getElementById("loader");
+      const errMsg = document.getElementById("error-msg");
+
+      btn.disabled = true;
+      loader.style.display = "block";
+      errMsg.textContent = "";
+
+      try {
+        // ① 브라우저 핑거프린트 생성
+        const fp   = await FingerprintJS.load();
+        const res  = await fp.get();
+        const fpId = res.visitorId;
+
+        // ② 쿠키 1차 차단 (클라이언트 즉시 차단)
+        if (getCookie(`visited_${locationId}`)) {
+          showAlready(); return;
+        }
+
+        // ③ Firestore 기반 중복 + 선착순 처리 (서버 측 검증)
+        const visitorKey = `${locationId}_${fpId}`;
+        const visitorRef = doc(db, "visitors", visitorKey);
+        const locationRef= doc(db, "locations", locationId);
+
+        const result = await runTransaction(db, async (t) => {
+          const visitorSnap  = await t.get(visitorRef);
+          const locationSnap = await t.get(locationRef);
+
+          // 이미 참가한 기기
+          if (visitorSnap.exists()) return { status: "already" };
+
+          // 보물 없는 위치
+          if (!config.hasTreasure) {
+            t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "empty" });
+            return { status: "empty" };
+          }
+
+          // 선착순 처리
+          const winnerCount = locationSnap.exists() ? (locationSnap.data().winnerCount || 0) : 0;
+          if (winnerCount >= config.maxWinners) {
+            t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "late" });
+            return { status: "empty" };  // 보물 소진
+          }
+
+          // 🎉 당첨!
+          const attemptId = `${locationId}_${Date.now()}`;
+          t.set(visitorRef,  { fpId, locationId, ts: serverTimestamp(), result: "found", attemptId });
+          t.set(locationRef, { winnerCount: winnerCount + 1 }, { merge: true });
+          t.set(doc(db, "winners", attemptId), {
+            attemptId, fpId, locationId, phone: null, ts: serverTimestamp()
+          });
+          return { status: "found", attemptId };
+        });
+
+        // ④ 쿠키 저장 (이후 방문 시 즉시 차단)
+        setCookie(`visited_${locationId}`, "1", 365);
+
+        // ⑤ 화면 전환
+        loader.style.display = "none";
+        if (result.status === "already") { showAlready(); }
+        else if (result.status === "found") { showFound(result.attemptId); }
+        else { showEmpty(); }
+
+      } catch(e) {
+        loader.style.display = "none";
+        errMsg.textContent = "⚠️ 오류가 발생했습니다. 다시 시도해주세요.";
+        btn.disabled = false;
+        console.error(e);
+      }
+    };
+
+    // ============================
+    // 📞 전화번호 제출
+    // ============================
+    window.submitPhone = async () => {
+      const raw      = document.getElementById("phone-input").value.replace(/-/g, "");
+      const phoneErr = document.getElementById("phone-error");
+      const phoneOk  = document.getElementById("phone-success");
+
+      if (!/^010\d{8}$/.test(raw)) {
+        phoneErr.textContent = "올바른 번호를 입력해주세요. (예: 010-1234-5678)";
+        return;
+      }
+      phoneErr.textContent = "";
+
+      try {
+        await updateDoc(doc(db, "winners", window._attemptId), { phone: raw });
+        document.querySelector(".submit-btn").disabled = true;
+        document.getElementById("phone-input").disabled = true;
+        phoneOk.textContent = "✅ 접수 완료! 담당자가 곧 연락드립니다.";
+      } catch(e) {
+        phoneErr.textContent = "제출 실패. 다시 시도해주세요.";
+      }
+    };
+
+    // ============================
+    // 🖥️ 화면 전환 함수
+    // ============================
+    window.showFound = (attemptId) => {
+      window._attemptId = attemptId;
+      toggle("start-screen", false);
+      toggle("result", true);
+      toggle("result-found", true);
+    };
+    window.showEmpty = () => {
+      toggle("start-screen", false);
+      toggle("result", true);
+      toggle("result-empty", true);
+    };
+    window.showAlready = () => {
+      toggle("start-screen", false);
+      toggle("result", true);
+      toggle("result-already", true);
+    };
+    const toggle = (id, show) => {
+      document.getElementById(id).style.display = show ? "block" : "none";
+    };
+  </script>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+      background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+      min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;
+    }
+    .container{text-align:center;padding:30px 24px;max-width:420px;width:100%}
+    .emoji{font-size:64px;margin-bottom:18px;animation:bounce 1.5s infinite}
+    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    h1{font-size:26px;margin-bottom:10px;font-weight:700}
+    .sub{font-size:15px;color:#bbb;margin-bottom:28px;line-height:1.6}
+    .loc-badge{
+      display:inline-block;background:rgba(255,255,255,0.1);
+      border:1px solid rgba(255,255,255,0.2);
+      border-radius:20px;padding:4px 14px;font-size:12px;
+      color:#adf;margin-bottom:20px;
+    }
+    .btn{
+      background:linear-gradient(135deg,#f093fb,#f5576c);
+      color:#fff;border:none;padding:16px;border-radius:50px;
+      font-size:19px;font-weight:700;cursor:pointer;width:100%;
+      box-shadow:0 4px 24px rgba(245,87,108,0.45);
+      transition:transform .1s,box-shadow .1s;
+    }
+    .btn:active{transform:scale(0.97)}
+    .btn:disabled{background:#444;box-shadow:none;cursor:not-allowed}
+    .loader{
+      display:none;width:42px;height:42px;
+      border:4px solid rgba(255,255,255,0.15);
+      border-top:4px solid #f5576c;
+      border-radius:50%;animation:spin .8s linear infinite;margin:20px auto;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .error-msg{color:#ff6b6b;font-size:13px;margin-top:10px}
+    #result{display:none}
+    .result-box{border-radius:24px;padding:32px 24px;margin-top:10px}
+    .result-found{background:linear-gradient(135deg,#1a1a6e,#4a0080)}
+    .result-empty{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
+    .phone-input{
+      background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.25);
+      border-radius:14px;padding:14px;font-size:20px;color:#fff;
+      width:100%;margin:18px 0 6px;text-align:center;letter-spacing:3px;
+    }
+    .phone-input::placeholder{color:rgba(255,255,255,0.35);letter-spacing:1px}
+    .phone-input:focus{outline:none;border-color:#f5576c}
+    .submit-btn{
+      background:#f5576c;color:#fff;border:none;
+      padding:14px;border-radius:50px;font-size:16px;
+      font-weight:700;cursor:pointer;width:100%;margin-top:8px;
+    }
+    .submit-btn:disabled{background:#555;cursor:not-allowed}
+    .success-msg{color:#69f0ae;font-size:14px;margin-top:12px}
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ① 시작 화면 -->
+  <div id="start-screen">
+    <div class="emoji">🗺️</div>
+    <h1>보물을 찾아라!</h1>
+    <div class="loc-badge" id="loc-label"></div>
+    <p class="sub">이 곳에 보물이 숨겨져 있을지도 모릅니다.<br/>버튼을 눌러 지금 확인해 보세요!</p>
+    <div class="loader" id="loader"></div>
+    <button class="btn" id="find-btn" onclick="findTreasure()">🔍 보물 찾기</button>
+    <p class="error-msg" id="error-msg"></p>
+  </div>
+
+  <!-- ② 결과 화면 -->
+  <div id="result">
+    <!-- 당첨 -->
+    <div class="result-box result-found" id="result-found" style="display:none">
+      <div class="emoji">🎉</div>
+      <h1>축하합니다!</h1>
+      <p class="sub">보물을 발견하셨습니다!<br/>전화번호를 입력하시면 경품을 드립니다.</p>
+      <input type="tel" class="phone-input" id="phone-input"
+             placeholder="010-0000-0000" maxlength="13"
+             oninput="formatPhone(this)" inputmode="numeric"/>
+      <p class="error-msg" id="phone-error"></p>
+      <button class="submit-btn" onclick="submitPhone()">📱 번호 제출하기</button>
+      <p class="success-msg" id="phone-success"></p>
+    </div>
+
+    <!-- 꽝 / 소진 -->
+    <div class="result-box result-empty" id="result-empty" style="display:none">
+      <div class="emoji">😅</div>
+      <h1>수고하셨습니다.</h1>
+      <p class="sub">아쉽게도 이 곳에는 보물이 없습니다.<br/>다음 기회를 노려보세요!</p>
+    </div>
+
+    <!-- 이미 참가 -->
+    <div class="result-box result-empty" id="result-already" style="display:none">
+      <div class="emoji">🚫</div>
+      <h1>이미 참가하셨습니다.</h1>
+      <p class="sub">1인 1회만 참가 가능합니다.<br/>중복 참가는 허용되지 않습니다.</p>
+    </div>
+  </div>
+
+</div>
+<script>
+  // 위치 배지 표시
+  const loc = new URLSearchParams(window.location.search).get("loc") || "?";
+  document.getElementById("loc-label").textContent = "📍 구역 " + loc;
+</script>
+</body>
+</html>
