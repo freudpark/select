@@ -281,6 +281,13 @@
       <div class="loader" id="loader"></div>
       <button class="btn" id="find-btn" onclick="findTreasure()">🔍 보물 찾기</button>
       <p class="error-msg" id="error-msg"></p>
+
+      <!-- 상세 진단 로그 (평소 숨김, 에러 시 표시) -->
+      <div id="debug-log"
+        style="display:none; font-size:10px; color:#888; margin-top:10px; text-align:left; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; border:1px solid #444; max-height:100px; overflow-y:auto;">
+        <strong>[시스템 로그]</strong><br>
+      </div>
+
       <a href="admin.html" class="admin-link">관리자</a>
     </div>
 
@@ -320,232 +327,218 @@
 
   </div>
 
-  <!-- 🚨 긴급 세이프 모드 및 개별 에러 진단 층 -->
+  <!-- Firebase & 외부 라이브러리 (Compat 버전 사용으로 호환성 극대화) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://openfpcdn.io/fingerprintjs/v4/iife.min.js"></script>
+
   <script>
-    // 1. 모듈 로딩 전 버튼 클릭 시 안내
-    window.findTreasure = function () {
-      alert("⚠️ 시스템 초기화 중입니다. 1~2초 후 다시 시도해 주세요.\n(지속적인 무반응 시: 인터넷 연결이나 브라우저 캐시를 확인해 주세요)");
-    };
-
-    // 2. 전역 에러 캡처 (화면 상단 표시)
-    window.onerror = function (msg, url, lineNo, columnNo, error) {
-      const display = document.getElementById('error-msg');
-      const detail = msg + " (L:" + lineNo + ")";
-      if (display) display.innerHTML = "❌ 시스템 오류: " + detail;
-      console.error("Critical:", detail, error);
-
-      // 심각한 로딩 실패 시 알림
-      if (msg.toLowerCase().indexOf("script error") > -1) {
-        alert("외부 라이브러리를 불러오지 못했습니다. 네트워크나 방화벽을 확인해 주세요.");
+    // [진단 로그 함수]
+    function logMsg(msg, isError = false) {
+      console.log(msg);
+      const logBox = document.getElementById('debug-log');
+      if (logBox) {
+        logBox.style.display = 'block';
+        logBox.innerHTML += (isError ? '❌ ' : '✔️ ') + msg + '<br>';
       }
+    }
+
+    // 🚨 전역 에러 핸들러
+    window.onerror = function (msg, url, lineNo) {
+      logMsg(msg + " (L:" + lineNo + ")", true);
+      alert("❌ 시스템 오류가 발생했습니다: " + msg);
       return false;
     };
-  </script>
 
-  <script type="module">
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, runTransaction, updateDoc, onSnapshot, serverTimestamp }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import FingerprintJS from "https://openfpcdn.io/fingerprintjs/v4/esm.min.js";
-
-    // =============================================
-    // 🔧 Firebase 설정값 교체 (본인 프로젝트 값으로!)
-    // =============================================
-    const firebaseConfig = {
-      apiKey: "AIzaSyA93NRgnuwxFdh2XCT_ekKGeNSblRtaBFw",
-      authDomain: "treasure-hunt-2fd83.firebaseapp.com",
-      projectId: "treasure-hunt-2fd83",
-      storageBucket: "treasure-hunt-2fd83.firebasestorage.app",
-      messagingSenderId: "56352345293",
-      appId: "1:56352345293:web:928ccb0515c76096ebed84",
-      measurementId: "G-3RP1L4BDM0"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    console.log("Firebase initialized successfully.");
-    document.getElementById("progress-text").textContent = "연결 완료 (데이터 대기)";
-
-    // =============================================
-    // 🗺️ 보물 지도 설정
-    // =============================================
-    const TREASURE_MAP = {
-      "A1": { name: "pyhgoshift", hasTreasure: true },
-      "A2": { name: "A2구역", hasTreasure: false },
-      "A3": { name: "A3구역", hasTreasure: true },
-      "A4": { name: "A4구역", hasTreasure: false },
-      "B1": { name: "B1구역", hasTreasure: false },
-      "B2": { name: "B2구역", hasTreasure: true },
-      "B3": { name: "B3구역", hasTreasure: false },
-      "B4": { name: "B4구역", hasTreasure: true },
-      "C1": { name: "C1구역", hasTreasure: false },
-      "C2": { name: "C2구역", hasTreasure: true },
-      "C3": { name: "C3구역", hasTreasure: false },
-      "C4": { name: "C4구역", hasTreasure: true },
-      "D1": { name: "D1구역", hasTreasure: false },
-      "D2": { name: "D2구역", hasTreasure: true },
-      "D3": { name: "D3구역", hasTreasure: false },
-      "D4": { name: "D4구역", hasTreasure: true },
-      "E1": { name: "E1구역", hasTreasure: false },
-      "E2": { name: "E2구역", hasTreasure: true },
-      "E3": { name: "E3구역", hasTreasure: false },
-      "E4": { name: "E4구역", hasTreasure: false },
-    };
-    const MAX_WINNERS = 10;
-
-    const locationId = new URLSearchParams(window.location.search).get("loc") || "default";
-    const config = TREASURE_MAP[locationId] || { name: locationId + "구역", hasTreasure: false };
-    document.getElementById("loc-label").textContent = "📍 " + config.name;
-
-    // =============================================
-    // 📊 실시간 당첨 현황
-    // =============================================
-    onSnapshot(doc(db, "global", "stats"), (snap) => {
-      const count = snap.exists() ? (snap.data().totalWinners || 0) : 0;
-      const pct = Math.min((count / MAX_WINNERS) * 100, 100);
-      document.getElementById("progress-text").textContent = `${count} / ${MAX_WINNERS}명`;
-      document.getElementById("progress-fill").style.width = pct + "%";
-      document.getElementById("progress-count").innerHTML = `${count} <span>/ ${MAX_WINNERS}명 당첨</span>`;
-    });
-
-    // =============================================
-    // 🍪 쿠키
-    // =============================================
-    const getCookie = (n) => document.cookie.split(";").some(c => c.trim().startsWith(n + "="));
-    const setCookie = (n, v, days) => {
-      const d = new Date(); d.setTime(d.getTime() + days * 86400000);
-      document.cookie = `${n}=${v};expires=${d.toUTCString()};path=/;SameSite=Strict`;
+    // [로딩 가드] 초기화 전 클릭 방지
+    window.findTreasure = function () {
+      alert("⚠️ 시스템이 아직 준비되지 않았습니다. 잠시만 기다려주세요.");
     };
 
     // =============================================
-    // 📱 전화번호 포맷
+    // 🔧 초기화 및 메인 로직
     // =============================================
-    window.formatPhone = (input) => {
-      let v = input.value.replace(/\D/g, "");
-      if (v.length >= 7) v = v.slice(0, 3) + "-" + v.slice(3, 7) + "-" + v.slice(7, 11);
-      else if (v.length >= 4) v = v.slice(0, 3) + "-" + v.slice(3);
-      input.value = v;
-    };
-
-    // =============================================
-    // 🔍 보물 찾기 메인 로직
-    // =============================================
-    window.findTreasure = async () => {
-      const btn = document.getElementById("find-btn");
-      const loader = document.getElementById("loader");
-      const errMsg = document.getElementById("error-msg");
-      btn.disabled = true;
-      loader.style.display = "block";
-      errMsg.textContent = "";
-
+    (async function initApp() {
       try {
-        let fpId;
-        try {
-          const fp = await FingerprintJS.load();
-          const res = await fp.get();
-          fpId = res.visitorId;
-        } catch (fpErr) {
-          console.warn("FingerprintJS failed, using fallback:", fpErr);
-          fpId = 'fallback_' + Math.random().toString(36).substr(2, 9);
-        }
-        const isAdmin = getCookie("admin_auth");
+        logMsg("시스템 초기화 중...");
 
-        if (!isAdmin && getCookie(`visited_${locationId}`)) {
-          showAlready(); loader.style.display = "none"; return;
-        }
+        const firebaseConfig = {
+          apiKey: "AIzaSyA93NRgnuwxFdh2XCT_ekKGeNSblRtaBFw",
+          authDomain: "treasure-hunt-2fd83.firebaseapp.com",
+          projectId: "treasure-hunt-2fd83",
+          storageBucket: "treasure-hunt-2fd83.firebasestorage.app",
+          messagingSenderId: "56352345293",
+          appId: "1:56352345293:web:928ccb0515c76096ebed84",
+          measurementId: "G-3RP1L4BDM0"
+        };
 
-        const visitorKey = isAdmin ? `admin_test_${Date.now()}` : `${locationId}_${fpId}`;
-        const visitorRef = doc(db, "visitors", visitorKey);
-        const globalRef = doc(db, "global", "stats");
+        if (typeof firebase === 'undefined') throw new Error("Firebase 라이브러리 로드 실패");
 
-        const result = await runTransaction(db, async (t) => {
-          const visitorSnap = await t.get(visitorRef);
-          const globalSnap = await t.get(globalRef);
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        logMsg("서버 연결 완료.");
+        document.getElementById("progress-text").textContent = "연결 완료 (데이터 대기)";
 
-          if (!isAdmin && visitorSnap.exists()) return { status: "already" };
+        const TREASURE_MAP = {
+          "A1": { name: "pyhgoshift", hasTreasure: true },
+          "A2": { name: "A2구역", hasTreasure: false },
+          "A3": { name: "A3구역", hasTreasure: true },
+          "A4": { name: "A4구역", hasTreasure: false },
+          "B1": { name: "B1구역", hasTreasure: false },
+          "B2": { name: "B2구역", hasTreasure: true },
+          "B3": { name: "B3구역", hasTreasure: false },
+          "B4": { name: "B4구역", hasTreasure: true },
+          "C1": { name: "C1구역", hasTreasure: false },
+          "C2": { name: "C2구역", hasTreasure: true },
+          "C3": { name: "C3구역", hasTreasure: false },
+          "C4": { name: "C4구역", hasTreasure: true },
+          "D1": { name: "D1구역", hasTreasure: false },
+          "D2": { name: "D2구역", hasTreasure: true },
+          "D3": { name: "D3구역", hasTreasure: false },
+          "D4": { name: "D4구역", hasTreasure: true },
+          "E1": { name: "E1구역", hasTreasure: false },
+          "E2": { name: "E2구역", hasTreasure: true },
+          "E3": { name: "E3구역", hasTreasure: false },
+          "E4": { name: "E4구역", hasTreasure: false },
+        };
+        const MAX_WINNERS = 10;
 
-          const totalWinners = globalSnap.exists() ? (globalSnap.data().totalWinners || 0) : 0;
+        const locationId = new URLSearchParams(window.location.search).get("loc") || "default";
+        const config = TREASURE_MAP[locationId] || { name: locationId + "구역", hasTreasure: false };
+        document.getElementById("loc-label").textContent = "📍 " + config.name;
 
-          if (!config.hasTreasure) {
-            if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "empty" });
-            return { status: "empty" };
-          }
-          if (totalWinners >= MAX_WINNERS) {
-            if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "late" });
-            return { status: "empty" };
-          }
-
-          // 🎉 당첨!
-          const attemptId = `${locationId}_${Date.now()}`;
-          if (!isAdmin) {
-            t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "found", attemptId });
-            t.set(doc(db, "winners", attemptId), {
-              attemptId, fpId, locationId,
-              locationName: config.name,
-              phone: null, ts: serverTimestamp()
-            });
-            t.set(globalRef, { totalWinners: totalWinners + 1 }, { merge: true });
-          }
-          return { status: "found", attemptId: isAdmin ? "admin_test" : attemptId };
+        // 실시간 당첨 현황
+        db.collection("global").doc("stats").onSnapshot((snap) => {
+          const count = snap.exists ? (snap.data().totalWinners || 0) : 0;
+          const pct = Math.min((count / MAX_WINNERS) * 100, 100);
+          document.getElementById("progress-text").textContent = `${count} / ${MAX_WINNERS}명`;
+          document.getElementById("progress-fill").style.width = pct + "%";
+          document.getElementById("progress-count").innerHTML = `${count} <span>/ ${MAX_WINNERS}명 당첨</span>`;
         });
 
-        loader.style.display = "none";
-        if (!isAdmin) setCookie(`visited_${locationId}`, "1", 365);
+        const getCookie = (n) => document.cookie.split(";").some(c => c.trim().startsWith(n + "="));
+        const setCookie = (n, v, days) => {
+          const d = new Date(); d.setTime(d.getTime() + days * 86400000);
+          document.cookie = `${n}=${v};expires=${d.toUTCString()};path=/;SameSite=Strict`;
+        };
 
-        if (result.status === "already") showAlready();
-        else if (result.status === "found") showFound(result.attemptId);
-        else showEmpty();
+        // 보물 찾기 실행함수 정의
+        window.findTreasure = async () => {
+          const btn = document.getElementById("find-btn");
+          const loader = document.getElementById("loader");
+          const errMsg = document.getElementById("error-msg");
+          btn.disabled = true;
+          loader.style.display = "block";
+          errMsg.textContent = "";
 
-      } catch (e) {
-        loader.style.display = "none";
-        errMsg.textContent = "⚠️ 오류 발생. 다시 시도해주세요.";
-        btn.disabled = false;
-        console.error(e);
-        alert("진단정보:\n" + e.message + "\n(Firebase 설정이나 네트워크 상태를 확인해주세요)");
-      }
-    };
+          try {
+            logMsg("기기 식별 중...");
+            let fpId;
+            try {
+              const fp = await FingerprintJS.load();
+              const res = await fp.get();
+              fpId = res.visitorId;
+            } catch (fpErr) {
+              logMsg("식별 라이브러리 무시 (폴백)", true);
+              fpId = 'fallback_' + Math.random().toString(36).substr(2, 9);
+            }
+            logMsg("ID: " + fpId.substr(0, 8));
 
-    // =============================================
-    // 📞 전화번호 제출
-    // =============================================
-    window.submitPhone = async () => {
-      const raw = document.getElementById("phone-input").value.replace(/-/g, "");
-      const phoneErr = document.getElementById("phone-error");
-      const phoneOk = document.getElementById("phone-success");
-      if (!/^010\d{8}$/.test(raw)) {
-        phoneErr.textContent = "올바른 번호 입력 (예: 010-1234-5678)"; return;
-      }
-      if (window._attemptId === "admin_test") {
-        phoneOk.textContent = "✅ [관리자 테스트] 실제 저장 안됨";
-        document.querySelector(".submit-btn").disabled = true; return;
-      }
-      try {
-        await updateDoc(doc(db, "winners", window._attemptId), { phone: raw });
-        document.querySelector(".submit-btn").disabled = true;
-        document.getElementById("phone-input").disabled = true;
-        phoneOk.textContent = "✅ 접수 완료! 담당자가 곧 연락드립니다.";
-      } catch (e) {
-        phoneErr.textContent = "제출 실패. 다시 시도해주세요.";
-      }
-    };
+            const isAdmin = getCookie("admin_auth");
+            if (!isAdmin && getCookie(`visited_${locationId}`)) {
+              showAlready(); loader.style.display = "none"; return;
+            }
 
-    // =============================================
-    // 🖥️ 화면 전환
-    // =============================================
-    window.showFound = (id) => {
-      window._attemptId = id;
-      toggle("start-screen", false); toggle("result", true); toggle("result-found", true);
-    };
-    window.showEmpty = () => {
-      toggle("start-screen", false); toggle("result", true); toggle("result-empty", true);
-    };
-    window.showAlready = () => {
-      toggle("start-screen", false); toggle("result", true); toggle("result-already", true);
-    };
-    const toggle = (id, show) => {
-      document.getElementById(id).style.display = show ? "block" : "none";
-    };
+            const visitorKey = isAdmin ? `admin_test_${Date.now()}` : `${locationId}_${fpId}`;
+            const visitorRef = db.collection("visitors").doc(visitorKey);
+            const globalRef = db.collection("global").doc("stats");
+
+            await firebase.firestore().runTransaction(async (t) => {
+              const visitorSnap = await t.get(visitorRef);
+              const globalSnap = await t.get(globalRef);
+
+              if (!isAdmin && visitorSnap.exists) {
+                showAlready(); return;
+              }
+
+              const totalWinners = globalSnap.exists ? (globalSnap.data().totalWinners || 0) : 0;
+
+              if (!config.hasTreasure) {
+                if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "empty" });
+                showEmpty(); return;
+              }
+              if (totalWinners >= MAX_WINNERS) {
+                if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "late" });
+                showEmpty(); return;
+              }
+
+              // 🎉 당첨!
+              const attemptId = `${locationId}_${Date.now()}`;
+              if (!isAdmin) {
+                t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "found", attemptId });
+                t.set(db.collection("winners").doc(attemptId), {
+                  attemptId, fpId, locationId,
+                  locationName: config.name,
+                  phone: null, ts: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                t.set(globalRef, { totalWinners: totalWinners + 1 }, { merge: true });
+              }
+              showFound(isAdmin ? "admin_test" : attemptId);
+            });
+
+            loader.style.display = "none";
+            if (!isAdmin) setCookie(`visited_${locationId}`, "1", 365);
+
+          } catch (e) {
+            logMsg(e.message, true);
+            loader.style.display = "none";
+            errMsg.textContent = "⚠️ 오류 발생. 다시 시도해 주세요.";
+            btn.disabled = false;
+            alert("진단정보:\n" + e.message + "\n(Firebase 설정이나 도메인 권한을 확인해주세요)");
+          }
+        };
+
+        window.submitPhone = async () => {
+          const raw = document.getElementById("phone-input").value.replace(/-/g, "");
+          const phoneErr = document.getElementById("phone-error");
+          const phoneOk = document.getElementById("phone-success");
+          if (!/^010\d{8}$/.test(raw)) {
+            phoneErr.textContent = "올바른 번호 입력 (예: 010-1234-5678)"; return;
+          }
+          if (window._attemptId === "admin_test") {
+            phoneOk.textContent = "✅ [관리자 테스트] 실제 저장 안됨";
+            document.querySelector(".submit-btn").disabled = true; return;
+          }
+          try {
+            await db.collection("winners").doc(window._attemptId).update({ phone: raw });
+            document.querySelector(".submit-btn").disabled = true;
+            document.getElementById("phone-input").disabled = true;
+            phoneOk.textContent = "✅ 접수 완료! 곧 연락드립니다.";
+          } catch (e) {
+            logMsg("제출 오류: " + e.message, true);
+            phoneErr.textContent = "제출 실패. 다시 시도해 주세요.";
+          }
+        };
+
+        window.showFound = (id) => {
+          window._attemptId = id;
+          toggle("start-screen", false); toggle("result", true); toggle("result-found", true);
+        };
+        window.showEmpty = () => {
+          toggle("start-screen", false); toggle("result", true); toggle("result-empty", true);
+        };
+        window.showAlready = () => {
+          toggle("start-screen", false); toggle("result", true); toggle("result-already", true);
+        };
+        const toggle = (id, show) => { document.getElementById(id).style.display = show ? "block" : "none"; };
+
+        logMsg("준비 완료.");
+      } catch (err) {
+        logMsg(err.message, true);
+      }
+    })();
   </script>
+
 </body>
 
 </html>
