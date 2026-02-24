@@ -485,82 +485,106 @@
         document.getElementById("last-update").innerHTML =
           "마지막 갱신: " + new Date().toLocaleTimeString("ko-KR") +
           ` <button class="logout-btn" onclick="doLogout()">로그아웃</button>`;
+        const winTable = document.getElementById("winners-tbody");
+        const visTable = document.getElementById("visitors-tbody");
+        winTable.innerHTML = "<tr><td colspan='4' style='text-align:center;color:#888;padding:20px'>로딩 중...</td></tr>";
+        visTable.innerHTML = "<tr><td colspan='4' style='text-align:center;color:#888;padding:20px'>로딩 중...</td></tr>";
 
-        // 당첨자 테이블
-        const wb = document.getElementById("winners-tbody");
-        wb.innerHTML = winners.length === 0
-          ? `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">당첨자 없음</td></tr>`
-          : winners.map((w, i) => `
-            <tr>
-              <td>${i + 1}</td>
-              <td>${w.locationName || w.locationId || "-"}</td>
-              <td>${w.phone
-              ? `<strong style="color:#69f0ae">${fmtPhone(w.phone)}</strong>`
-              : `<span style="color:#888;font-size:12px">미입력</span>`}</td>
-              <td>${fmtTime(w.ts)}</td>
-            </tr>`).join("");
+        try {
+          // [개선] 인덱스 설정 없이도 작동하도록 기본 쿼리 후 JS에서 정렬
+          const winnersSnap = await db.collection("winners").get();
+          const visitorsSnap = await db.collection("visitors").get();
 
-        // 참가자 테이블
-        document.getElementById("visitors-tbody").innerHTML = visitors.length === 0
-          ? `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">기록 없음</td></tr>`
-          : visitors.map((v, i) => `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${v.locationId || "-"}</td>
-            <td>${v.result === "found"
-              ? `<span class="badge-found">당첨</span>`
-              : `<span class="badge-empty">꽝</span>`}</td>
-            <td>${fmtTime(v.ts)}</td>
-          </tr>`).join("");
+          let winners = [];
+          winnersSnap.forEach(doc => winners.push({ id: doc.id, ...doc.data() }));
+          winners.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0));
 
-        window._winnersData = winners;
-      } catch (e) {
-        console.error(e);
-        alert("데이터 로드 실패: " + e.message);
-      }
-    };
+          let visitors = [];
+          visitorsSnap.forEach(doc => visitors.push({ id: doc.id, ...doc.data() }));
+          visitors.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0));
 
-    window.exportCSV = () => {
-      const data = window._winnersData || [];
-      if (!data.length) { alert("당첨자 데이터가 없습니다."); return; }
-      let csv = "번호,구역,전화번호,시간\n";
-      data.forEach((w, i) => {
-        csv += `${i + 1},${w.locationName || w.locationId || "-"},${w.phone || "미입력"},${fmtTime(w.ts)}\n`;
-      });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }));
-      a.download = "보물찾기_당첨자.csv";
-      a.click();
-    };
+          const phoneCount = winners.filter(w => w.phone).length;
 
-    window.goTest = () => window.open("index.html?loc=A1", "_blank");
-    window.showResetModal = () => document.getElementById("reset-modal").classList.add("show");
-    window.hideResetModal = () => document.getElementById("reset-modal").classList.remove("show");
+          document.getElementById("stat-total").textContent = visitors.length;
+          document.getElementById("stat-winners").textContent = winners.length;
+          document.getElementById("stat-phone").textContent = phoneCount;
+          document.getElementById("stat-bar").style.width = Math.min((winners.length / 10) * 100, 100) + "%";
+          document.getElementById("last-update").innerHTML =
+            "마지막 갱신: " + new Date().toLocaleTimeString("ko-KR") +
+            ` <button class="logout-btn" onclick="doLogout()">로그아웃</button>`;
 
-    window.doReset = async () => {
-      hideResetModal();
-      try {
-        const batch = db.batch();
-        const cols = ["winners", "visitors"];
-        for (const col of cols) {
-          const snap = await db.collection(col).get();
-          snap.forEach(d => batch.delete(d.ref));
+          winTable.innerHTML = winners.length === 0
+            ? `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">당첨자 없음</td></tr>`
+            : winners.map((w, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${w.locationName || w.locationId || "-"}</td>
+                  <td>${w.phone
+                ? `<strong style="color:#69f0ae">${fmtPhone(w.phone)}</strong>`
+                : `<span style="color:#888;font-size:12px">미입력</span>`}</td>
+                  <td>${fmtTime(w.ts)}</td>
+                </tr>`).join("");
+
+          visTable.innerHTML = visitors.length === 0
+            ? `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">기록 없음</td></tr>`
+            : visitors.map((v, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${v.locationId || "-"}</td>
+                <td>${v.result === "found"
+                ? `<span class="badge-found">당첨</span>`
+                : `<span class="badge-empty">꽝</span>`}</td>
+                <td>${fmtTime(v.ts)}</td>
+              </tr>`).join("");
+
+          window._winnersData = winners;
+        } catch (e) {
+          console.error(e);
+          alert("데이터 로드 실패: " + e.message + "\n(인터넷 연결이나 Firebase 설정을 확인해주세요)");
         }
-        batch.set(db.collection("global").doc("stats"), { totalWinners: 0 });
-        await batch.commit();
-        alert("✅ 초기화 완료!");
-        loadData();
-      } catch (e) {
-        alert("초기화 실패: " + e.message);
-      }
-    };
+      };
 
-    const fmtPhone = (p) => p.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
-    const fmtTime = (ts) => ts?.toDate
-      ? ts.toDate().toLocaleString("ko-KR")
-      : ts?.seconds
-        ? new Date(ts.seconds * 1000).toLocaleString("ko-KR")
-        : "-";
+      window.exportCSV = () => {
+        const data = window._winnersData || [];
+        if (!data.length) { alert("당첨자 데이터가 없습니다."); return; }
+        let csv = "번호,구역,전화번호,시간\n";
+        data.forEach((w, i) => {
+          csv += `${i + 1},${w.locationName || w.locationId || "-"},${w.phone || "미입력"},${fmtTime(w.ts)}\n`;
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }));
+        a.download = "보물찾기_당첨자.csv";
+        a.click();
+      };
+
+      window.goTest = () => window.open("index.html?loc=A1", "_blank");
+      window.showResetModal = () => document.getElementById("reset-modal").classList.add("show");
+      window.hideResetModal = () => document.getElementById("reset-modal").classList.remove("show");
+
+      window.doReset = async () => {
+        hideResetModal();
+        try {
+          const batch = db.batch();
+          const cols = ["winners", "visitors"];
+          for (const col of cols) {
+            const snap = await db.collection(col).get();
+            snap.forEach(d => batch.delete(d.ref));
+          }
+          batch.set(db.collection("global").doc("stats"), { totalWinners: 0 });
+          await batch.commit();
+          alert("✅ 초기화 완료!");
+          loadData();
+        } catch (e) {
+          alert("초기화 실패: " + e.message);
+        }
+      };
+
+      const fmtPhone = (p) => p.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+      const fmtTime = (ts) => ts?.toDate
+        ? ts.toDate().toLocaleString("ko-KR")
+        : ts?.seconds
+          ? new Date(ts.seconds * 1000).toLocaleString("ko-KR")
+          : "-";
   </script>
 
 </body>
