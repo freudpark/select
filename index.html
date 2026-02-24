@@ -258,7 +258,7 @@
     <!-- 시작 화면 -->
     <div id="start-screen">
       <div class="title-main">🏆 정보자원통합 보물찾기 !! <span
-          style="font-size: 10px; color: #666; vertical-align: middle;">v1.2.4</span></div>
+          style="font-size: 10px; color: #666; vertical-align: middle;">v1.2.5</span></div>
       <div class="title-sub">행운을 함께 합니다.</div>
 
       <!-- 경기교육 로고 이미지 (Base64 내장) -->
@@ -519,6 +519,12 @@
             btn.disabled = false;
             alert("진단정보:\n" + e.message + "\n(Firebase 설정이나 도메인 권한을 확인해주세요)");
           }
+        };
+
+        window.formatPhone = (target) => {
+          target.value = target.value
+            .replace(/[^0-9]/g, "")
+            .replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, `$1-$2-$3`);
         };
 
         window.submitPhone = async () => {
