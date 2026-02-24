@@ -457,25 +457,28 @@
             };
 
             const fpId = await getPersistentId();
-            logMsg("ID: " + fpId.substr(0, 8));
+            logMsg("기기 식별 완료: " + fpId.substr(0, 8));
 
             const isAdmin = getCookie("admin_auth");
-            // [중복 체크 강화] 쿠키 + 로컬스토리지 복합 체크
-            if (!isAdmin && (getCookie(`visited_${locationId}`) || localStorage.getItem(`voted_${locationId}`))) {
-              showAlready(); loader.style.display = "none"; return;
-            }
-
+            // [검증 강화] 로컬 스토리지와 서버 데이터를 이중으로 체크
             const visitorKey = isAdmin ? `admin_test_${Date.now()}` : `${locationId}_${fpId}`;
             const visitorRef = db.collection("visitors").doc(visitorKey);
             const globalRef = db.collection("global").doc("stats");
 
-            logMsg("데이터 서버 전송 중...");
+            // 1차 클라이언트 사이드 가드
+            if (!isAdmin && (getCookie(`visited_${locationId}`) || localStorage.getItem(`voted_${locationId}`))) {
+              showAlready(); loader.style.display = "none"; return;
+            }
+
+            // 2차 서버 사이드 가드 (트랜잭션 내부에서 더 엄격하게 체크)
+            logMsg("서버 데이터 확인 중...");
             await firebase.firestore().runTransaction(async (t) => {
               const visitorSnap = await t.get(visitorRef);
               const globalSnap = await t.get(globalRef);
 
               if (!isAdmin && visitorSnap.exists) {
-                showAlready(); return;
+                logMsg("이미 참여한 기록 발견", true);
+                showAlready(); throw new Error("ALREADY_PARTICIPATED");
               }
 
               const totalWinners = globalSnap.exists ? (globalSnap.data().totalWinners || 0) : 0;
