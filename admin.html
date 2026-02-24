@@ -585,6 +585,9 @@
         : ts?.seconds
           ? new Date(ts.seconds * 1000).toLocaleString("ko-KR")
           : "-";
+
+      // [추가] 초기화 실행 구문 닫기
+      initApp().catch(e => console.error(e));
   </script>
 
 </body>
