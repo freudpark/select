@@ -1,229 +1,505 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>관리자 — 정보자원통합 보물찾기</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#0f0c29;color:#fff;min-height:100vh;padding:20px}
-    .header{text-align:center;padding:16px 0 24px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:20px}
-    .header img{width:100px;border-radius:8px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto}
-    .header h1{font-size:18px;color:#ffd700;font-weight:900}
-    .header p{font-size:12px;color:#aaa;margin-top:4px}
-    #login-screen{max-width:340px;margin:80px auto;text-align:center}
-    .pw-input{background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.2);border-radius:12px;padding:14px;font-size:16px;color:#fff;width:100%;margin:16px 0;text-align:center;}
-    .pw-input:focus{outline:none;border-color:#ffd700}
-    .login-btn{background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;border:none;padding:14px;border-radius:50px;font-size:16px;font-weight:700;cursor:pointer;width:100%;}
-    .err{color:#ff6b6b;font-size:13px;margin-top:8px}
-    #dashboard{display:none}
-    .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
-    .stat-card{background:rgba(255,255,255,0.07);border-radius:16px;padding:16px;text-align:center;}
-    .stat-num{font-size:32px;font-weight:900;color:#f5576c}
-    .stat-label{font-size:12px;color:#aaa;margin-top:4px}
-    .btn-row{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-    .action-btn{flex:1;min-width:100px;padding:11px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;}
-    .btn-refresh{background:#2196f3;color:#fff}
-    .btn-export{background:#4caf50;color:#fff}
-    .btn-reset{background:#f44336;color:#fff}
-    .btn-test{background:#ff9800;color:#fff}
-    .table-wrap{overflow-x:auto;border-radius:16px;background:rgba(255,255,255,0.05);margin-bottom:24px}
-    table{width:100%;border-collapse:collapse;font-size:13px}
-    th{background:rgba(255,215,0,0.15);color:#ffd700;padding:12px 10px;text-align:left}
-    td{padding:11px 10px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ddd}
-    tr:last-child td{border-bottom:none}
-    tr:hover td{background:rgba(255,255,255,0.04)}
-    .badge-found{background:#4caf5033;color:#69f0ae;padding:3px 8px;border-radius:20px;font-size:11px}
-    .badge-empty{background:#ff572233;color:#ff8a65;padding:3px 8px;border-radius:20px;font-size:11px}
-    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;}
-    .modal.show{display:flex}
-    .modal-box{background:#1a1a3e;border-radius:20px;padding:30px 24px;max-width:340px;width:90%;text-align:center;}
-    .modal-box h2{font-size:20px;margin-bottom:10px;color:#f44336}
-    .modal-box p{font-size:14px;color:#aaa;margin-bottom:20px;line-height:1.6}
-    .modal-btn-row{display:flex;gap:10px}
-    .modal-cancel{flex:1;padding:12px;border:none;border-radius:10px;background:#444;color:#fff;cursor:pointer;font-size:14px}
-    .modal-confirm{flex:1;padding:12px;border:none;border-radius:10px;background:#f44336;color:#fff;cursor:pointer;font-size:14px;font-weight:700}
-    .logout-btn{font-size:12px;color:#888;background:none;border:none;cursor:pointer;margin-left:10px}
-    .progress-bar-bg{background:rgba(255,255,255,0.1);border-radius:50px;height:6px;overflow:hidden;margin-top:6px}
-    .progress-bar-fill{height:100%;border-radius:50px;background:linear-gradient(90deg,#f093fb,#f5576c);transition:width .5s}
-    .section-title{font-size:14px;color:#ffd700;margin-bottom:10px;font-weight:700}
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: #0f0c29;
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px
+    }
+
+    .header {
+      text-align: center;
+      padding: 16px 0 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px
+    }
+
+    .header img {
+      width: 100px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto
+    }
+
+    .header h1 {
+      font-size: 18px;
+      color: #ffd700;
+      font-weight: 900
+    }
+
+    .header p {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 4px
+    }
+
+    #login-screen {
+      max-width: 340px;
+      margin: 80px auto;
+      text-align: center
+    }
+
+    .pw-input {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 16px;
+      color: #fff;
+      width: 100%;
+      margin: 16px 0;
+      text-align: center;
+    }
+
+    .pw-input:focus {
+      outline: none;
+      border-color: #ffd700
+    }
+
+    .login-btn {
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .err {
+      color: #ff6b6b;
+      font-size: 13px;
+      margin-top: 8px
+    }
+
+    #dashboard {
+      display: none
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 32px;
+      font-weight: 900;
+      color: #f5576c
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 4px
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap
+    }
+
+    .action-btn {
+      flex: 1;
+      min-width: 100px;
+      padding: 11px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-refresh {
+      background: #2196f3;
+      color: #fff
+    }
+
+    .btn-export {
+      background: #4caf50;
+      color: #fff
+    }
+
+    .btn-reset {
+      background: #f44336;
+      color: #fff
+    }
+
+    .btn-test {
+      background: #ff9800;
+      color: #fff
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      margin-bottom: 24px
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px
+    }
+
+    th {
+      background: rgba(255, 215, 0, 0.15);
+      color: #ffd700;
+      padding: 12px 10px;
+      text-align: left
+    }
+
+    td {
+      padding: 11px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ddd
+    }
+
+    tr:last-child td {
+      border-bottom: none
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.04)
+    }
+
+    .badge-found {
+      background: #4caf5033;
+      color: #69f0ae;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px
+    }
+
+    .badge-empty {
+      background: #ff572233;
+      color: #ff8a65;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex
+    }
+
+    .modal-box {
+      background: #1a1a3e;
+      border-radius: 20px;
+      padding: 30px 24px;
+      max-width: 340px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .modal-box h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+      color: #f44336
+    }
+
+    .modal-box p {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 20px;
+      line-height: 1.6
+    }
+
+    .modal-btn-row {
+      display: flex;
+      gap: 10px
+    }
+
+    .modal-cancel {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #444;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px
+    }
+
+    .modal-confirm {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #f44336;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700
+    }
+
+    .logout-btn {
+      font-size: 12px;
+      color: #888;
+      background: none;
+      border: none;
+      cursor: pointer;
+      margin-left: 10px
+    }
+
+    .progress-bar-bg {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50px;
+      height: 6px;
+      overflow: hidden;
+      margin-top: 6px
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 50px;
+      background: linear-gradient(90deg, #f093fb, #f5576c);
+      transition: width .5s
+    }
+
+    .section-title {
+      font-size: 14px;
+      color: #ffd700;
+      margin-bottom: 10px;
+      font-weight: 700
+    }
   </style>
 </head>
+
 <body>
 
-<!-- 로그인 -->
-<div id="login-screen">
-  <img src="geurim2.jpg" style="width:120px;border-radius:10px;margin:0 auto 16px;display:block;" alt="경기교육"/>
-  <h2 style="font-size:20px;color:#ffd700">관리자 로그인</h2>
-  <p style="font-size:13px;color:#aaa;margin-top:6px">🏆 정보자원통합 보물찾기</p>
-  <input type="password" class="pw-input" id="pw-input"
-         placeholder="비밀번호 입력"
-         onkeydown="if(event.key==='Enter')doLogin()"/>
-  <button class="login-btn" onclick="doLogin()">🔓 로그인</button>
-  <p class="err" id="login-err"></p>
-</div>
-
-<!-- 대시보드 -->
-<div id="dashboard">
-  <div class="header">
-    <img src="geurim2.jpg" alt="경기교육"/>
-    <h1>🏆 정보자원통합 보물찾기 !! — 관리자</h1>
-    <p id="last-update">마지막 갱신: -
-      <button class="logout-btn" onclick="doLogout()">로그아웃</button>
-    </p>
+  <!-- 로그인 -->
+  <div id="login-screen">
+    <img src="geo.png" style="width:120px;border-radius:10px;margin:0 auto 16px;display:block;" alt="경기교육" />
+    <h2 style="font-size:20px;color:#ffd700">관리자 로그인</h2>
+    <p style="font-size:13px;color:#aaa;margin-top:6px">🏆 정보자원통합 보물찾기</p>
+    <input type="password" class="pw-input" id="pw-input" placeholder="비밀번호 입력"
+      onkeydown="if(event.key==='Enter')doLogin()" />
+    <button class="login-btn" onclick="doLogin()">🔓 로그인</button>
+    <p class="err" id="login-err"></p>
   </div>
 
-  <!-- 통계 카드 -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-num" id="stat-total">-</div>
-      <div class="stat-label">총 참가자</div>
+  <!-- 대시보드 -->
+  <div id="dashboard">
+    <div class="header">
+      <img src="geo.png" alt="경기교육" />
+      <h1>🏆 정보자원통합 보물찾기 !! — 관리자</h1>
+      <p id="last-update">마지막 갱신: -
+        <button class="logout-btn" onclick="doLogout()">로그아웃</button>
+      </p>
     </div>
-    <div class="stat-card">
-      <div class="stat-num" style="color:#ffd700" id="stat-winners">-</div>
-      <div class="stat-label">당첨자 / 10명</div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="stat-bar" style="width:0%"></div>
+
+    <!-- 통계 카드 -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-total">-</div>
+        <div class="stat-label">총 참가자</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:#ffd700" id="stat-winners">-</div>
+        <div class="stat-label">당첨자 / 10명</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="stat-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:#69f0ae" id="stat-phone">-</div>
+        <div class="stat-label">전화번호 접수</div>
       </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-num" style="color:#69f0ae" id="stat-phone">-</div>
-      <div class="stat-label">전화번호 접수</div>
+
+    <!-- 버튼 -->
+    <div class="btn-row">
+      <button class="action-btn btn-refresh" onclick="loadData()">🔄 새로고침</button>
+      <button class="action-btn btn-test" onclick="goTest()">🧪 테스트</button>
+      <button class="action-btn btn-export" onclick="exportCSV()">📥 CSV</button>
+      <button class="action-btn btn-reset" onclick="showResetModal()">🗑️ 초기화</button>
+    </div>
+
+    <!-- 당첨자 -->
+    <div class="section-title">🎉 당첨자 목록</div>
+    <div class="table-wrap" style="margin-bottom:24px">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>구역</th>
+            <th>전화번호</th>
+            <th>시간</th>
+          </tr>
+        </thead>
+        <tbody id="winners-tbody">
+          <tr>
+            <td colspan="4" style="text-align:center;color:#888;padding:20px">로딩중...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 전체 참가자 -->
+    <div class="section-title">👥 전체 참가자 로그</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>구역</th>
+            <th>결과</th>
+            <th>시간</th>
+          </tr>
+        </thead>
+        <tbody id="visitors-tbody">
+          <tr>
+            <td colspan="4" style="text-align:center;color:#888;padding:20px">로딩중...</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- 버튼 -->
-  <div class="btn-row">
-    <button class="action-btn btn-refresh" onclick="loadData()">🔄 새로고침</button>
-    <button class="action-btn btn-test"    onclick="goTest()">🧪 테스트</button>
-    <button class="action-btn btn-export"  onclick="exportCSV()">📥 CSV</button>
-    <button class="action-btn btn-reset"   onclick="showResetModal()">🗑️ 초기화</button>
-  </div>
-
-  <!-- 당첨자 -->
-  <div class="section-title">🎉 당첨자 목록</div>
-  <div class="table-wrap" style="margin-bottom:24px">
-    <table>
-      <thead><tr><th>#</th><th>구역</th><th>전화번호</th><th>시간</th></tr></thead>
-      <tbody id="winners-tbody">
-        <tr><td colspan="4" style="text-align:center;color:#888;padding:20px">로딩중...</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- 전체 참가자 -->
-  <div class="section-title">👥 전체 참가자 로그</div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>#</th><th>구역</th><th>결과</th><th>시간</th></tr></thead>
-      <tbody id="visitors-tbody">
-        <tr><td colspan="4" style="text-align:center;color:#888;padding:20px">로딩중...</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- 초기화 모달 -->
-<div class="modal" id="reset-modal">
-  <div class="modal-box">
-    <h2>⚠️ 전체 초기화</h2>
-    <p>모든 참가자, 당첨자, 전화번호 데이터가<br/><strong style="color:#f44336">영구 삭제</strong>됩니다.<br/>정말 초기화하시겠습니까?</p>
-    <div class="modal-btn-row">
-      <button class="modal-cancel" onclick="hideResetModal()">취소</button>
-      <button class="modal-confirm" onclick="doReset()">초기화</button>
+  <!-- 초기화 모달 -->
+  <div class="modal" id="reset-modal">
+    <div class="modal-box">
+      <h2>⚠️ 전체 초기화</h2>
+      <p>모든 참가자, 당첨자, 전화번호 데이터가<br /><strong style="color:#f44336">영구 삭제</strong>됩니다.<br />정말 초기화하시겠습니까?</p>
+      <div class="modal-btn-row">
+        <button class="modal-cancel" onclick="hideResetModal()">취소</button>
+        <button class="modal-confirm" onclick="doReset()">초기화</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, doc, setDoc, writeBatch }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, setDoc, writeBatch }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // =============================================
-  // 🔧 Firebase 설정값 교체 (index.html과 동일!)
-  // =============================================
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
+    // =============================================
+    // 🔧 Firebase 설정값 교체 (index.html과 동일!)
+    // =============================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyA93NRgnuwxFdh2XCT_ekKGeNSblRtaBFw",
+      authDomain: "treasure-hunt-2fd83.firebaseapp.com",
+      projectId: "treasure-hunt-2fd83",
+      storageBucket: "treasure-hunt-2fd83.firebasestorage.app",
+      messagingSenderId: "56352345293",
+      appId: "1:56352345293:web:928ccb0515c76096ebed84",
+      measurementId: "G-3RP1L4BDM0"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  // 관리자 비밀번호 (원하는 값으로 변경!)
-  const ADMIN_PASSWORD = "admin1234";
+    // 관리자 비밀번호 (원하는 값으로 변경!)
+    const ADMIN_PASSWORD = "admin1234";
 
-  const getCookie = (n) => document.cookie.split(";").some(c => c.trim().startsWith(n + "="));
-  const setCookie = (n, v, d) => {
-    const dt = new Date(); dt.setTime(dt.getTime() + d * 86400000);
-    document.cookie = `${n}=${v};expires=${dt.toUTCString()};path=/;SameSite=Strict`;
-  };
-  const delCookie = (n) => { document.cookie = `${n}=;expires=Thu,01 Jan 1970 00:00:00 UTC;path=/`; };
+    const getCookie = (n) => document.cookie.split(";").some(c => c.trim().startsWith(n + "="));
+    const setCookie = (n, v, d) => {
+      const dt = new Date(); dt.setTime(dt.getTime() + d * 86400000);
+      document.cookie = `${n}=${v};expires=${dt.toUTCString()};path=/;SameSite=Strict`;
+    };
+    const delCookie = (n) => { document.cookie = `${n}=;expires=Thu,01 Jan 1970 00:00:00 UTC;path=/`; };
 
-  if (getCookie("admin_auth")) showDashboard();
+    if (getCookie("admin_auth")) showDashboard();
 
-  window.doLogin = () => {
-    const pw = document.getElementById("pw-input").value;
-    if (pw === ADMIN_PASSWORD) {
-      setCookie("admin_auth", "1", 1);
-      showDashboard();
-    } else {
-      document.getElementById("login-err").textContent = "비밀번호가 틀렸습니다.";
+    window.doLogin = () => {
+      const pw = document.getElementById("pw-input").value;
+      if (pw === ADMIN_PASSWORD) {
+        setCookie("admin_auth", "1", 1);
+        showDashboard();
+      } else {
+        document.getElementById("login-err").textContent = "비밀번호가 틀렸습니다.";
+      }
+    };
+
+    window.doLogout = () => { delCookie("admin_auth"); location.reload(); };
+
+    function showDashboard() {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      loadData();
     }
-  };
 
-  window.doLogout = () => { delCookie("admin_auth"); location.reload(); };
+    window.loadData = async () => {
+      try {
+        const winnersSnap = await getDocs(collection(db, "winners"));
+        const visitorsSnap = await getDocs(collection(db, "visitors"));
 
-  function showDashboard() {
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("dashboard").style.display = "block";
-    loadData();
-  }
+        const winners = [];
+        winnersSnap.forEach(d => winners.push({ id: d.id, ...d.data() }));
+        winners.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0));
 
-  window.loadData = async () => {
-    try {
-      const winnersSnap  = await getDocs(collection(db, "winners"));
-      const visitorsSnap = await getDocs(collection(db, "visitors"));
+        const visitors = [];
+        visitorsSnap.forEach(d => visitors.push({ id: d.id, ...d.data() }));
+        visitors.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0));
 
-      const winners = [];
-      winnersSnap.forEach(d => winners.push({ id: d.id, ...d.data() }));
-      winners.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0));
+        const phoneCount = winners.filter(w => w.phone).length;
 
-      const visitors = [];
-      visitorsSnap.forEach(d => visitors.push({ id: d.id, ...d.data() }));
-      visitors.sort((a, b) => (b.ts?.seconds || 0) - (a.ts?.seconds || 0));
+        document.getElementById("stat-total").textContent = visitors.length;
+        document.getElementById("stat-winners").textContent = winners.length;
+        document.getElementById("stat-phone").textContent = phoneCount;
+        document.getElementById("stat-bar").style.width = Math.min((winners.length / 10) * 100, 100) + "%";
+        document.getElementById("last-update").innerHTML =
+          "마지막 갱신: " + new Date().toLocaleTimeString("ko-KR") +
+          ` <button class="logout-btn" onclick="doLogout()">로그아웃</button>`;
 
-      const phoneCount = winners.filter(w => w.phone).length;
-
-      document.getElementById("stat-total").textContent   = visitors.length;
-      document.getElementById("stat-winners").textContent = winners.length;
-      document.getElementById("stat-phone").textContent   = phoneCount;
-      document.getElementById("stat-bar").style.width     = Math.min((winners.length / 10) * 100, 100) + "%";
-      document.getElementById("last-update").innerHTML    =
-        "마지막 갱신: " + new Date().toLocaleTimeString("ko-KR") +
-        ` <button class="logout-btn" onclick="doLogout()">로그아웃</button>`;
-
-      // 당첨자 테이블
-      const wb = document.getElementById("winners-tbody");
-      wb.innerHTML = winners.length === 0
-        ? `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">당첨자 없음</td></tr>`
-        : winners.map((w, i) => `
+        // 당첨자 테이블
+        const wb = document.getElementById("winners-tbody");
+        wb.innerHTML = winners.length === 0
+          ? `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">당첨자 없음</td></tr>`
+          : winners.map((w, i) => `
             <tr>
               <td>${i + 1}</td>
               <td>${w.locationName || w.locationId || "-"}</td>
               <td>${w.phone
-                ? `<strong style="color:#69f0ae">${fmtPhone(w.phone)}</strong>`
-                : `<span style="color:#888;font-size:12px">미입력</span>`}</td>
+              ? `<strong style="color:#69f0ae">${fmtPhone(w.phone)}</strong>`
+              : `<span style="color:#888;font-size:12px">미입력</span>`}</td>
               <td>${fmtTime(w.ts)}</td>
             </tr>`).join("");
 
-      // 참가자 테이블
-      document.getElementById("visitors-tbody").innerHTML = visitors.map((v, i) => `
+        // 참가자 테이블
+        document.getElementById("visitors-tbody").innerHTML = visitors.map((v, i) => `
         <tr>
           <td>${i + 1}</td>
           <td>${v.locationId || "-"}</td>
@@ -233,53 +509,53 @@
           <td>${fmtTime(v.ts)}</td>
         </tr>`).join("");
 
-      window._winnersData = winners;
-    } catch(e) {
-      alert("데이터 로드 실패: " + e.message);
-    }
-  };
-
-  window.exportCSV = () => {
-    const data = window._winnersData || [];
-    if (!data.length) { alert("당첨자 데이터가 없습니다."); return; }
-    let csv = "번호,구역,전화번호,시간\n";
-    data.forEach((w, i) => {
-      csv += `${i+1},${w.locationName||w.locationId||"-"},${w.phone||"미입력"},${fmtTime(w.ts)}\n`;
-    });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }));
-    a.download = "보물찾기_당첨자.csv";
-    a.click();
-  };
-
-  window.goTest    = () => window.open("index.html?loc=A1", "_blank");
-  window.showResetModal = () => document.getElementById("reset-modal").classList.add("show");
-  window.hideResetModal = () => document.getElementById("reset-modal").classList.remove("show");
-
-  window.doReset = async () => {
-    hideResetModal();
-    try {
-      const batch = writeBatch(db);
-      for (const col of ["winners", "visitors", "locations", "ip_log"]) {
-        const snap = await getDocs(collection(db, col));
-        snap.forEach(d => batch.delete(d.ref));
+        window._winnersData = winners;
+      } catch (e) {
+        alert("데이터 로드 실패: " + e.message);
       }
-      batch.set(doc(db, "global", "stats"), { totalWinners: 0 });
-      await batch.commit();
-      alert("✅ 초기화 완료!");
-      loadData();
-    } catch(e) {
-      alert("초기화 실패: " + e.message);
-    }
-  };
+    };
 
-  const fmtPhone = (p) => p.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
-  const fmtTime  = (ts) => ts?.toDate
-    ? ts.toDate().toLocaleString("ko-KR")
-    : ts?.seconds
-    ? new Date(ts.seconds * 1000).toLocaleString("ko-KR")
-    : "-";
-</script>
+    window.exportCSV = () => {
+      const data = window._winnersData || [];
+      if (!data.length) { alert("당첨자 데이터가 없습니다."); return; }
+      let csv = "번호,구역,전화번호,시간\n";
+      data.forEach((w, i) => {
+        csv += `${i + 1},${w.locationName || w.locationId || "-"},${w.phone || "미입력"},${fmtTime(w.ts)}\n`;
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }));
+      a.download = "보물찾기_당첨자.csv";
+      a.click();
+    };
+
+    window.goTest = () => window.open("index.html?loc=A1", "_blank");
+    window.showResetModal = () => document.getElementById("reset-modal").classList.add("show");
+    window.hideResetModal = () => document.getElementById("reset-modal").classList.remove("show");
+
+    window.doReset = async () => {
+      hideResetModal();
+      try {
+        const batch = writeBatch(db);
+        for (const col of ["winners", "visitors", "locations", "ip_log"]) {
+          const snap = await getDocs(collection(db, col));
+          snap.forEach(d => batch.delete(d.ref));
+        }
+        batch.set(doc(db, "global", "stats"), { totalWinners: 0 });
+        await batch.commit();
+        alert("✅ 초기화 완료!");
+        loadData();
+      } catch (e) {
+        alert("초기화 실패: " + e.message);
+      }
+    };
+
+    const fmtPhone = (p) => p.replace(/(\d{3})(\d{4})(\d{4})/, "$1-$2-$3");
+    const fmtTime = (ts) => ts?.toDate
+      ? ts.toDate().toLocaleString("ko-KR")
+      : ts?.seconds
+        ? new Date(ts.seconds * 1000).toLocaleString("ko-KR")
+        : "-";
+  </script>
 </body>
-</html>
 
+</html>
