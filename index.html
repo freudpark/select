@@ -270,7 +270,7 @@
       <div class="progress-wrap">
         <div class="progress-label">
           <span>🎁 당첨 현황</span>
-          <span id="progress-text">로딩중...</span>
+          <span id="progress-text">서버 연결 시도 중...</span>
         </div>
         <div class="progress-bar-bg">
           <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
@@ -320,7 +320,30 @@
 
   </div>
 
+  <!-- 🚨 긴급 세이프 모드 및 개별 에러 진단 층 -->
+  <script>
+    // 1. 모듈 로딩 전 버튼 클릭 시 안내
+    window.findTreasure = function () {
+      alert("⚠️ 시스템 초기화 중입니다. 1~2초 후 다시 시도해 주세요.\n(지속적인 무반응 시: 인터넷 연결이나 브라우저 캐시를 확인해 주세요)");
+    };
+
+    // 2. 전역 에러 캡처 (화면 상단 표시)
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      const display = document.getElementById('error-msg');
+      const detail = msg + " (L:" + lineNo + ")";
+      if (display) display.innerHTML = "❌ 시스템 오류: " + detail;
+      console.error("Critical:", detail, error);
+
+      // 심각한 로딩 실패 시 알림
+      if (msg.toLowerCase().indexOf("script error") > -1) {
+        alert("외부 라이브러리를 불러오지 못했습니다. 네트워크나 방화벽을 확인해 주세요.");
+      }
+      return false;
+    };
+  </script>
+
   <script type="module">
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, setDoc, runTransaction, updateDoc, onSnapshot, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -340,6 +363,8 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    console.log("Firebase initialized successfully.");
+    document.getElementById("progress-text").textContent = "연결 완료 (데이터 대기)";
 
     // =============================================
     // 🗺️ 보물 지도 설정
