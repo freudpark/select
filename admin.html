@@ -410,13 +410,13 @@
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, setDoc, writeBatch }
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <!-- Firebase & 외부 라이브러리 (Compat 버전) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+  <script>
     // =============================================
-    // 🔧 Firebase 설정값 교체 (index.html과 동일!)
+    // 🔧 Firebase 설정값 (index.html과 동일)
     // =============================================
     const firebaseConfig = {
       apiKey: "AIzaSyA93NRgnuwxFdh2XCT_ekKGeNSblRtaBFw",
@@ -428,10 +428,11 @@
       measurementId: "G-3RP1L4BDM0"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // 초기화
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    // 관리자 비밀번호 (원하는 값으로 변경!)
+    // 관리자 비밀번호
     const ADMIN_PASSWORD = "qkrdydgml";
 
     const getCookie = (n) => document.cookie.split(";").some(c => c.trim().startsWith(n + "="));
@@ -463,8 +464,9 @@
 
     window.loadData = async () => {
       try {
-        const winnersSnap = await getDocs(collection(db, "winners"));
-        const visitorsSnap = await getDocs(collection(db, "visitors"));
+        console.log("데이터 불러오는 중...");
+        const winnersSnap = await db.collection("winners").get();
+        const visitorsSnap = await db.collection("visitors").get();
 
         const winners = [];
         winnersSnap.forEach(d => winners.push({ id: d.id, ...d.data() }));
@@ -499,18 +501,21 @@
             </tr>`).join("");
 
         // 참가자 테이블
-        document.getElementById("visitors-tbody").innerHTML = visitors.map((v, i) => `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${v.locationId || "-"}</td>
-          <td>${v.result === "found"
-            ? `<span class="badge-found">당첨</span>`
-            : `<span class="badge-empty">꽝</span>`}</td>
-          <td>${fmtTime(v.ts)}</td>
-        </tr>`).join("");
+        document.getElementById("visitors-tbody").innerHTML = visitors.length === 0
+          ? `<tr><td colspan="4" style="text-align:center;color:#888;padding:20px">기록 없음</td></tr>`
+          : visitors.map((v, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${v.locationId || "-"}</td>
+            <td>${v.result === "found"
+              ? `<span class="badge-found">당첨</span>`
+              : `<span class="badge-empty">꽝</span>`}</td>
+            <td>${fmtTime(v.ts)}</td>
+          </tr>`).join("");
 
         window._winnersData = winners;
       } catch (e) {
+        console.error(e);
         alert("데이터 로드 실패: " + e.message);
       }
     };
@@ -535,12 +540,13 @@
     window.doReset = async () => {
       hideResetModal();
       try {
-        const batch = writeBatch(db);
-        for (const col of ["winners", "visitors", "locations", "ip_log"]) {
-          const snap = await getDocs(collection(db, col));
+        const batch = db.batch();
+        const cols = ["winners", "visitors"];
+        for (const col of cols) {
+          const snap = await db.collection(col).get();
           snap.forEach(d => batch.delete(d.ref));
         }
-        batch.set(doc(db, "global", "stats"), { totalWinners: 0 });
+        batch.set(db.collection("global").doc("stats"), { totalWinners: 0 });
         await batch.commit();
         alert("✅ 초기화 완료!");
         loadData();
@@ -556,6 +562,7 @@
         ? new Date(ts.seconds * 1000).toLocaleString("ko-KR")
         : "-";
   </script>
+
 </body>
 
 </html>
