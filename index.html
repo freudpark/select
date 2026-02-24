@@ -1,340 +1,526 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>정보자원통합 보물찾기 !!</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
-      background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
-      min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
     }
-    .container{text-align:center;padding:30px 24px;max-width:420px;width:100%}
-    .title-main{font-size:20px;font-weight:900;color:#ffd700;margin-bottom:4px;letter-spacing:1px}
-    .title-sub{font-size:13px;color:#aaa;margin-bottom:20px}
-    .top-logo{width:160px;border-radius:12px;margin:0 auto 18px;display:block;animation:bounce 1.5s infinite}
-    @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-    h1{font-size:24px;margin-bottom:10px;font-weight:700}
-    .sub{font-size:15px;color:#bbb;margin-bottom:20px;line-height:1.7}
-    .loc-badge{
-      display:inline-block;background:rgba(255,215,0,0.15);
-      border:1px solid rgba(255,215,0,0.4);
-      border-radius:20px;padding:5px 16px;font-size:13px;
-      color:#ffd700;margin-bottom:16px;font-weight:700;
+
+    body {
+      font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
     }
-    .progress-wrap{
-      background:rgba(255,255,255,0.07);border-radius:16px;
-      padding:14px 18px;margin-bottom:22px;
+
+    .container {
+      text-align: center;
+      padding: 30px 24px;
+      max-width: 420px;
+      width: 100%
     }
-    .progress-label{font-size:13px;color:#aaa;margin-bottom:8px;display:flex;justify-content:space-between}
-    .progress-bar-bg{background:rgba(255,255,255,0.1);border-radius:50px;height:10px;overflow:hidden}
-    .progress-bar-fill{
-      height:100%;border-radius:50px;
-      background:linear-gradient(90deg,#f093fb,#f5576c);
-      transition:width 0.5s ease;
+
+    .title-main {
+      font-size: 20px;
+      font-weight: 900;
+      color: #ffd700;
+      margin-bottom: 4px;
+      letter-spacing: 1px
     }
-    .progress-count{font-size:22px;font-weight:900;color:#f5576c;margin-top:8px}
-    .progress-count span{font-size:14px;color:#aaa;font-weight:400}
-    .btn{
-      background:linear-gradient(135deg,#f093fb,#f5576c);
-      color:#fff;border:none;padding:16px;border-radius:50px;
-      font-size:19px;font-weight:700;cursor:pointer;width:100%;
-      box-shadow:0 4px 24px rgba(245,87,108,0.45);
-      transition:transform .1s;
+
+    .title-sub {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 20px
     }
-    .btn:active{transform:scale(0.97)}
-    .btn:disabled{background:#444;box-shadow:none;cursor:not-allowed}
-    .loader{
-      display:none;width:42px;height:42px;
-      border:4px solid rgba(255,255,255,0.15);
-      border-top:4px solid #f5576c;
-      border-radius:50%;animation:spin .8s linear infinite;margin:20px auto;
+
+    .top-logo {
+      width: 160px;
+      border-radius: 12px;
+      margin: 0 auto 18px;
+      display: block;
+      animation: bounce 1.5s infinite
     }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .error-msg{color:#ff6b6b;font-size:13px;margin-top:10px}
-    #result{display:none}
-    .result-box{border-radius:24px;padding:32px 24px}
-    .result-found{background:linear-gradient(135deg,#1a1a6e,#4a0080)}
-    .result-empty{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
-    .phone-input{
-      background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.25);
-      border-radius:14px;padding:14px;font-size:20px;color:#fff;
-      width:100%;margin:18px 0 6px;text-align:center;letter-spacing:3px;
-    }
-    .phone-input::placeholder{color:rgba(255,255,255,0.35);letter-spacing:1px}
-    .phone-input:focus{outline:none;border-color:#f5576c}
-    .submit-btn{
-      background:#f5576c;color:#fff;border:none;
-      padding:14px;border-radius:50px;font-size:16px;
-      font-weight:700;cursor:pointer;width:100%;margin-top:8px;
-    }
-    .submit-btn:disabled{background:#555;cursor:not-allowed}
-    .success-msg{color:#69f0ae;font-size:14px;margin-top:12px}
-    .admin-link{font-size:11px;color:rgba(255,255,255,0.15);margin-top:30px;display:block;text-decoration:none}
-  </style>
-</head>
-<body>
-<div class="container">
 
-  <!-- 시작 화면 -->
-  <div id="start-screen">
-    <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
-    <div class="title-sub">선착순 10명 당첨</div>
+    @keyframes bounce {
 
-    <!-- 경기교육 로고 이미지 (Base64 내장) -->
-    <img class="top-logo" id="top-logo" src="geo.png" alt="경기교육"/>
-
-    <div class="loc-badge" id="loc-label">📍 구역 로딩중...</div>
-    <p class="sub">이 곳에 보물이 숨겨져 있을지도 모릅니다.<br/>버튼을 눌러 지금 확인해 보세요!</p>
-
-    <!-- 진행 현황 -->
-    <div class="progress-wrap">
-      <div class="progress-label">
-        <span>🎁 당첨 현황</span>
-        <span id="progress-text">로딩중...</span>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
-      </div>
-      <div class="progress-count" id="progress-count">- <span>/ 10명 당첨</span></div>
-    </div>
-
-    <div class="loader" id="loader"></div>
-    <button class="btn" id="find-btn" onclick="findTreasure()">🔍 보물 찾기</button>
-    <p class="error-msg" id="error-msg"></p>
-    <a href="admin.html" class="admin-link">관리자</a>
-  </div>
-
-  <!-- 결과 화면 -->
-  <div id="result">
-    <!-- 당첨 -->
-    <div class="result-box result-found" id="result-found" style="display:none">
-      <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
-      <img src="geo.png" style="width:120px;border-radius:10px;margin:16px auto;display:block;" alt="경기교육"/>
-      <h1>🎉 축하합니다!</h1>
-      <p class="sub">보물을 발견하셨습니다!<br/>전화번호를 입력하시면 경품을 드립니다.</p>
-      <input type="tel" class="phone-input" id="phone-input"
-             placeholder="010-0000-0000" maxlength="13"
-             oninput="formatPhone(this)" inputmode="numeric"/>
-      <p class="error-msg" id="phone-error"></p>
-      <button class="submit-btn" onclick="submitPhone()">📱 번호 제출하기</button>
-      <p class="success-msg" id="phone-success"></p>
-    </div>
-
-    <!-- 꽝 -->
-    <div class="result-box result-empty" id="result-empty" style="display:none">
-      <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
-      <img src="geo.png" style="width:120px;border-radius:10px;margin:16px auto;display:block;opacity:0.6;" alt="경기교육"/>
-      <h1>😅 수고하셨습니다.</h1>
-      <p class="sub">아쉽게도 이 곳에는 보물이 없습니다.<br/>다음 기회를 노려보세요!</p>
-    </div>
-
-    <!-- 이미 참가 -->
-    <div class="result-box result-empty" id="result-already" style="display:none">
-      <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
-      <img src="geo.png" style="width:120px;border-radius:10px;margin:16px auto;display:block;opacity:0.4;" alt="경기교육"/>
-      <h1>🚫 이미 참가하셨습니다.</h1>
-      <p class="sub">1인 1회만 참가 가능합니다.</p>
-    </div>
-  </div>
-
-</div>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, runTransaction, updateDoc, onSnapshot, serverTimestamp }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import FingerprintJS from "https://openfpcdn.io/fingerprintjs/v4/esm.min.js";
-
-  // =============================================
-  // 🔧 Firebase 설정값 교체 (본인 프로젝트 값으로!)
-  // =============================================
-  const firebaseConfig = {
-    apiKey: "AIzaSyA93NRgnuwxFdh2XCT_ekKGeNSblRtaBFw",
-    authDomain: "treasure-hunt-2fd83.firebaseapp.com",
-    projectId: "treasure-hunt-2fd83",
-    storageBucket: "treasure-hunt-2fd83.firebasestorage.app",
-    messagingSenderId: "56352345293",
-    appId: "1:56352345293:web:928ccb0515c76096ebed84",
-    measurementId: "G-3RP1L4BDM0"
-  }; 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-
-  // =============================================
-  // 🗺️ 보물 지도 설정
-  // =============================================
-  const TREASURE_MAP = {
-    "A1": { name: "pyhgoshift", hasTreasure: true  },
-    "A2": { name: "A2구역",     hasTreasure: false },
-    "A3": { name: "A3구역",     hasTreasure: true  },
-    "A4": { name: "A4구역",     hasTreasure: false },
-    "B1": { name: "B1구역",     hasTreasure: false },
-    "B2": { name: "B2구역",     hasTreasure: true  },
-    "B3": { name: "B3구역",     hasTreasure: false },
-    "B4": { name: "B4구역",     hasTreasure: true  },
-    "C1": { name: "C1구역",     hasTreasure: false },
-    "C2": { name: "C2구역",     hasTreasure: true  },
-    "C3": { name: "C3구역",     hasTreasure: false },
-    "C4": { name: "C4구역",     hasTreasure: true  },
-    "D1": { name: "D1구역",     hasTreasure: false },
-    "D2": { name: "D2구역",     hasTreasure: true  },
-    "D3": { name: "D3구역",     hasTreasure: false },
-    "D4": { name: "D4구역",     hasTreasure: true  },
-    "E1": { name: "E1구역",     hasTreasure: false },
-    "E2": { name: "E2구역",     hasTreasure: true  },
-    "E3": { name: "E3구역",     hasTreasure: false },
-    "E4": { name: "E4구역",     hasTreasure: false },
-  };
-  const MAX_WINNERS = 10;
-
-  const locationId = new URLSearchParams(window.location.search).get("loc") || "default";
-  const config = TREASURE_MAP[locationId] || { name: locationId+"구역", hasTreasure: false };
-  document.getElementById("loc-label").textContent = "📍 " + config.name;
-
-  // =============================================
-  // 📊 실시간 당첨 현황
-  // =============================================
-  onSnapshot(doc(db, "global", "stats"), (snap) => {
-    const count = snap.exists() ? (snap.data().totalWinners || 0) : 0;
-    const pct = Math.min((count / MAX_WINNERS) * 100, 100);
-    document.getElementById("progress-text").textContent = `${count} / ${MAX_WINNERS}명`;
-    document.getElementById("progress-fill").style.width = pct + "%";
-    document.getElementById("progress-count").innerHTML = `${count} <span>/ ${MAX_WINNERS}명 당첨</span>`;
-  });
-
-  // =============================================
-  // 🍪 쿠키
-  // =============================================
-  const getCookie = (n) => document.cookie.split(";").some(c => c.trim().startsWith(n + "="));
-  const setCookie = (n, v, days) => {
-    const d = new Date(); d.setTime(d.getTime() + days * 86400000);
-    document.cookie = `${n}=${v};expires=${d.toUTCString()};path=/;SameSite=Strict`;
-  };
-
-  // =============================================
-  // 📱 전화번호 포맷
-  // =============================================
-  window.formatPhone = (input) => {
-    let v = input.value.replace(/\D/g, "");
-    if (v.length >= 7) v = v.slice(0,3) + "-" + v.slice(3,7) + "-" + v.slice(7,11);
-    else if (v.length >= 4) v = v.slice(0,3) + "-" + v.slice(3);
-    input.value = v;
-  };
-
-  // =============================================
-  // 🔍 보물 찾기 메인 로직
-  // =============================================
-  window.findTreasure = async () => {
-    const btn    = document.getElementById("find-btn");
-    const loader = document.getElementById("loader");
-    const errMsg = document.getElementById("error-msg");
-    btn.disabled = true;
-    loader.style.display = "block";
-    errMsg.textContent = "";
-
-    try {
-      const fp   = await FingerprintJS.load();
-      const res  = await fp.get();
-      const fpId = res.visitorId;
-      const isAdmin = getCookie("admin_auth");
-
-      if (!isAdmin && getCookie(`visited_${locationId}`)) {
-        showAlready(); loader.style.display = "none"; return;
+      0%,
+      100% {
+        transform: translateY(0)
       }
 
-      const visitorKey  = isAdmin ? `admin_test_${Date.now()}` : `${locationId}_${fpId}`;
-      const visitorRef  = doc(db, "visitors", visitorKey);
-      const globalRef   = doc(db, "global", "stats");
+      50% {
+        transform: translateY(-8px)
+      }
+    }
 
-      const result = await runTransaction(db, async (t) => {
-        const visitorSnap = await t.get(visitorRef);
-        const globalSnap  = await t.get(globalRef);
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+      font-weight: 700
+    }
 
-        if (!isAdmin && visitorSnap.exists()) return { status: "already" };
+    .sub {
+      font-size: 15px;
+      color: #bbb;
+      margin-bottom: 20px;
+      line-height: 1.7
+    }
 
-        const totalWinners = globalSnap.exists() ? (globalSnap.data().totalWinners || 0) : 0;
+    .loc-badge {
+      display: inline-block;
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      border-radius: 20px;
+      padding: 5px 16px;
+      font-size: 13px;
+      color: #ffd700;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
 
-        if (!config.hasTreasure) {
-          if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "empty" });
-          return { status: "empty" };
+    .progress-wrap {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 14px 18px;
+      margin-bottom: 22px;
+    }
+
+    .progress-label {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between
+    }
+
+    .progress-bar-bg {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50px;
+      height: 10px;
+      overflow: hidden
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 50px;
+      background: linear-gradient(90deg, #f093fb, #f5576c);
+      transition: width 0.5s ease;
+    }
+
+    .progress-count {
+      font-size: 22px;
+      font-weight: 900;
+      color: #f5576c;
+      margin-top: 8px
+    }
+
+    .progress-count span {
+      font-size: 14px;
+      color: #aaa;
+      font-weight: 400
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 50px;
+      font-size: 19px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 4px 24px rgba(245, 87, 108, 0.45);
+      transition: transform .1s;
+    }
+
+    .btn:active {
+      transform: scale(0.97)
+    }
+
+    .btn:disabled {
+      background: #444;
+      box-shadow: none;
+      cursor: not-allowed
+    }
+
+    .loader {
+      display: none;
+      width: 42px;
+      height: 42px;
+      border: 4px solid rgba(255, 255, 255, 0.15);
+      border-top: 4px solid #f5576c;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .error-msg {
+      color: #ff6b6b;
+      font-size: 13px;
+      margin-top: 10px
+    }
+
+    #result {
+      display: none
+    }
+
+    .result-box {
+      border-radius: 24px;
+      padding: 32px 24px
+    }
+
+    .result-found {
+      background: linear-gradient(135deg, #1a1a6e, #4a0080)
+    }
+
+    .result-empty {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1)
+    }
+
+    .phone-input {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 20px;
+      color: #fff;
+      width: 100%;
+      margin: 18px 0 6px;
+      text-align: center;
+      letter-spacing: 3px;
+    }
+
+    .phone-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 1px
+    }
+
+    .phone-input:focus {
+      outline: none;
+      border-color: #f5576c
+    }
+
+    .submit-btn {
+      background: #f5576c;
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .submit-btn:disabled {
+      background: #555;
+      cursor: not-allowed
+    }
+
+    .success-msg {
+      color: #69f0ae;
+      font-size: 14px;
+      margin-top: 12px
+    }
+
+    .admin-link {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.15);
+      margin-top: 30px;
+      display: block;
+      text-decoration: none
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- 시작 화면 -->
+    <div id="start-screen">
+      <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
+      <div class="title-sub">행운을 함께 합니다.</div>
+
+      <!-- 경기교육 로고 이미지 (Base64 내장) -->
+      <img class="top-logo" id="top-logo" src="geo.png" alt="경기교육" />
+
+      <div class="loc-badge" id="loc-label">📍 구역 로딩중...</div>
+      <p class="sub">이 곳에 보물이 숨겨져 있을지도 모릅니다.<br />버튼을 눌러 지금 확인해 보세요!</p>
+
+      <!-- 진행 현황 -->
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>🎁 당첨 현황</span>
+          <span id="progress-text">로딩중...</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+        <div class="progress-count" id="progress-count">- <span>/ 10명 당첨</span></div>
+      </div>
+
+      <div class="loader" id="loader"></div>
+      <button class="btn" id="find-btn" onclick="findTreasure()">🔍 보물 찾기</button>
+      <p class="error-msg" id="error-msg"></p>
+      <a href="admin.html" class="admin-link">관리자</a>
+    </div>
+
+    <!-- 결과 화면 -->
+    <div id="result">
+      <!-- 당첨 -->
+      <div class="result-box result-found" id="result-found" style="display:none">
+        <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
+        <img src="geo.png" style="width:120px;border-radius:10px;margin:16px auto;display:block;" alt="경기교육" />
+        <h1>🎉 축하합니다!</h1>
+        <p class="sub">보물을 발견하셨습니다!<br />전화번호를 입력하시면 경품을 드립니다.</p>
+        <input type="tel" class="phone-input" id="phone-input" placeholder="010-0000-0000" maxlength="13"
+          oninput="formatPhone(this)" inputmode="numeric" />
+        <p class="error-msg" id="phone-error"></p>
+        <button class="submit-btn" onclick="submitPhone()">📱 번호 제출하기</button>
+        <p class="success-msg" id="phone-success"></p>
+      </div>
+
+      <!-- 꽝 -->
+      <div class="result-box result-empty" id="result-empty" style="display:none">
+        <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
+        <img src="geo.png" style="width:120px;border-radius:10px;margin:16px auto;display:block;opacity:0.6;"
+          alt="경기교육" />
+        <h1>😅 수고하셨습니다.</h1>
+        <p class="sub">아쉽게도 이 곳에는 보물이 없습니다.<br />다음 기회를 노려보세요!</p>
+      </div>
+
+      <!-- 이미 참가 -->
+      <div class="result-box result-empty" id="result-already" style="display:none">
+        <div class="title-main">🏆 정보자원통합 보물찾기 !!</div>
+        <img src="geo.png" style="width:120px;border-radius:10px;margin:16px auto;display:block;opacity:0.4;"
+          alt="경기교육" />
+        <h1>🚫 이미 참가하셨습니다.</h1>
+        <p class="sub">1인 1회만 참가 가능합니다.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, runTransaction, updateDoc, onSnapshot, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import FingerprintJS from "https://openfpcdn.io/fingerprintjs/v4/esm.min.js";
+
+    // =============================================
+    // 🔧 Firebase 설정값 교체 (본인 프로젝트 값으로!)
+    // =============================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyA93NRgnuwxFdh2XCT_ekKGeNSblRtaBFw",
+      authDomain: "treasure-hunt-2fd83.firebaseapp.com",
+      projectId: "treasure-hunt-2fd83",
+      storageBucket: "treasure-hunt-2fd83.firebasestorage.app",
+      messagingSenderId: "56352345293",
+      appId: "1:56352345293:web:928ccb0515c76096ebed84",
+      measurementId: "G-3RP1L4BDM0"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // =============================================
+    // 🗺️ 보물 지도 설정
+    // =============================================
+    const TREASURE_MAP = {
+      "A1": { name: "pyhgoshift", hasTreasure: true },
+      "A2": { name: "A2구역", hasTreasure: false },
+      "A3": { name: "A3구역", hasTreasure: true },
+      "A4": { name: "A4구역", hasTreasure: false },
+      "B1": { name: "B1구역", hasTreasure: false },
+      "B2": { name: "B2구역", hasTreasure: true },
+      "B3": { name: "B3구역", hasTreasure: false },
+      "B4": { name: "B4구역", hasTreasure: true },
+      "C1": { name: "C1구역", hasTreasure: false },
+      "C2": { name: "C2구역", hasTreasure: true },
+      "C3": { name: "C3구역", hasTreasure: false },
+      "C4": { name: "C4구역", hasTreasure: true },
+      "D1": { name: "D1구역", hasTreasure: false },
+      "D2": { name: "D2구역", hasTreasure: true },
+      "D3": { name: "D3구역", hasTreasure: false },
+      "D4": { name: "D4구역", hasTreasure: true },
+      "E1": { name: "E1구역", hasTreasure: false },
+      "E2": { name: "E2구역", hasTreasure: true },
+      "E3": { name: "E3구역", hasTreasure: false },
+      "E4": { name: "E4구역", hasTreasure: false },
+    };
+    const MAX_WINNERS = 10;
+
+    const locationId = new URLSearchParams(window.location.search).get("loc") || "default";
+    const config = TREASURE_MAP[locationId] || { name: locationId + "구역", hasTreasure: false };
+    document.getElementById("loc-label").textContent = "📍 " + config.name;
+
+    // =============================================
+    // 📊 실시간 당첨 현황
+    // =============================================
+    onSnapshot(doc(db, "global", "stats"), (snap) => {
+      const count = snap.exists() ? (snap.data().totalWinners || 0) : 0;
+      const pct = Math.min((count / MAX_WINNERS) * 100, 100);
+      document.getElementById("progress-text").textContent = `${count} / ${MAX_WINNERS}명`;
+      document.getElementById("progress-fill").style.width = pct + "%";
+      document.getElementById("progress-count").innerHTML = `${count} <span>/ ${MAX_WINNERS}명 당첨</span>`;
+    });
+
+    // =============================================
+    // 🍪 쿠키
+    // =============================================
+    const getCookie = (n) => document.cookie.split(";").some(c => c.trim().startsWith(n + "="));
+    const setCookie = (n, v, days) => {
+      const d = new Date(); d.setTime(d.getTime() + days * 86400000);
+      document.cookie = `${n}=${v};expires=${d.toUTCString()};path=/;SameSite=Strict`;
+    };
+
+    // =============================================
+    // 📱 전화번호 포맷
+    // =============================================
+    window.formatPhone = (input) => {
+      let v = input.value.replace(/\D/g, "");
+      if (v.length >= 7) v = v.slice(0, 3) + "-" + v.slice(3, 7) + "-" + v.slice(7, 11);
+      else if (v.length >= 4) v = v.slice(0, 3) + "-" + v.slice(3);
+      input.value = v;
+    };
+
+    // =============================================
+    // 🔍 보물 찾기 메인 로직
+    // =============================================
+    window.findTreasure = async () => {
+      const btn = document.getElementById("find-btn");
+      const loader = document.getElementById("loader");
+      const errMsg = document.getElementById("error-msg");
+      btn.disabled = true;
+      loader.style.display = "block";
+      errMsg.textContent = "";
+
+      try {
+        let fpId;
+        try {
+          const fp = await FingerprintJS.load();
+          const res = await fp.get();
+          fpId = res.visitorId;
+        } catch (fpErr) {
+          console.warn("FingerprintJS failed, using fallback:", fpErr);
+          fpId = 'fallback_' + Math.random().toString(36).substr(2, 9);
         }
-        if (totalWinners >= MAX_WINNERS) {
-          if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "late" });
-          return { status: "empty" };
+        const isAdmin = getCookie("admin_auth");
+
+        if (!isAdmin && getCookie(`visited_${locationId}`)) {
+          showAlready(); loader.style.display = "none"; return;
         }
 
-        // 🎉 당첨!
-        const attemptId = `${locationId}_${Date.now()}`;
-        if (!isAdmin) {
-          t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "found", attemptId });
-          t.set(doc(db, "winners", attemptId), {
-            attemptId, fpId, locationId,
-            locationName: config.name,
-            phone: null, ts: serverTimestamp()
-          });
-          t.set(globalRef, { totalWinners: totalWinners + 1 }, { merge: true });
-        }
-        return { status: "found", attemptId: isAdmin ? "admin_test" : attemptId };
-      });
+        const visitorKey = isAdmin ? `admin_test_${Date.now()}` : `${locationId}_${fpId}`;
+        const visitorRef = doc(db, "visitors", visitorKey);
+        const globalRef = doc(db, "global", "stats");
 
-      loader.style.display = "none";
-      if (!isAdmin) setCookie(`visited_${locationId}`, "1", 365);
+        const result = await runTransaction(db, async (t) => {
+          const visitorSnap = await t.get(visitorRef);
+          const globalSnap = await t.get(globalRef);
 
-      if (result.status === "already") showAlready();
-      else if (result.status === "found") showFound(result.attemptId);
-      else showEmpty();
+          if (!isAdmin && visitorSnap.exists()) return { status: "already" };
 
-    } catch(e) {
-      loader.style.display = "none";
-      errMsg.textContent = "⚠️ 오류 발생. 다시 시도해주세요.";
-      btn.disabled = false;
-      console.error(e);
-    }
-  };
+          const totalWinners = globalSnap.exists() ? (globalSnap.data().totalWinners || 0) : 0;
 
-  // =============================================
-  // 📞 전화번호 제출
-  // =============================================
-  window.submitPhone = async () => {
-    const raw      = document.getElementById("phone-input").value.replace(/-/g, "");
-    const phoneErr = document.getElementById("phone-error");
-    const phoneOk  = document.getElementById("phone-success");
-    if (!/^010\d{8}$/.test(raw)) {
-      phoneErr.textContent = "올바른 번호 입력 (예: 010-1234-5678)"; return;
-    }
-    if (window._attemptId === "admin_test") {
-      phoneOk.textContent = "✅ [관리자 테스트] 실제 저장 안됨";
-      document.querySelector(".submit-btn").disabled = true; return;
-    }
-    try {
-      await updateDoc(doc(db, "winners", window._attemptId), { phone: raw });
-      document.querySelector(".submit-btn").disabled = true;
-      document.getElementById("phone-input").disabled = true;
-      phoneOk.textContent = "✅ 접수 완료! 담당자가 곧 연락드립니다.";
-    } catch(e) {
-      phoneErr.textContent = "제출 실패. 다시 시도해주세요.";
-    }
-  };
+          if (!config.hasTreasure) {
+            if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "empty" });
+            return { status: "empty" };
+          }
+          if (totalWinners >= MAX_WINNERS) {
+            if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "late" });
+            return { status: "empty" };
+          }
 
-  // =============================================
-  // 🖥️ 화면 전환
-  // =============================================
-  window.showFound = (id) => {
-    window._attemptId = id;
-    toggle("start-screen", false); toggle("result", true); toggle("result-found", true);
-  };
-  window.showEmpty = () => {
-    toggle("start-screen", false); toggle("result", true); toggle("result-empty", true);
-  };
-  window.showAlready = () => {
-    toggle("start-screen", false); toggle("result", true); toggle("result-already", true);
-  };
-  const toggle = (id, show) => {
-    document.getElementById(id).style.display = show ? "block" : "none";
-  };
-</script>
+          // 🎉 당첨!
+          const attemptId = `${locationId}_${Date.now()}`;
+          if (!isAdmin) {
+            t.set(visitorRef, { fpId, locationId, ts: serverTimestamp(), result: "found", attemptId });
+            t.set(doc(db, "winners", attemptId), {
+              attemptId, fpId, locationId,
+              locationName: config.name,
+              phone: null, ts: serverTimestamp()
+            });
+            t.set(globalRef, { totalWinners: totalWinners + 1 }, { merge: true });
+          }
+          return { status: "found", attemptId: isAdmin ? "admin_test" : attemptId };
+        });
+
+        loader.style.display = "none";
+        if (!isAdmin) setCookie(`visited_${locationId}`, "1", 365);
+
+        if (result.status === "already") showAlready();
+        else if (result.status === "found") showFound(result.attemptId);
+        else showEmpty();
+
+      } catch (e) {
+        loader.style.display = "none";
+        errMsg.textContent = "⚠️ 오류 발생. 다시 시도해주세요.";
+        btn.disabled = false;
+        console.error(e);
+        alert("진단정보:\n" + e.message + "\n(Firebase 설정이나 네트워크 상태를 확인해주세요)");
+      }
+    };
+
+    // =============================================
+    // 📞 전화번호 제출
+    // =============================================
+    window.submitPhone = async () => {
+      const raw = document.getElementById("phone-input").value.replace(/-/g, "");
+      const phoneErr = document.getElementById("phone-error");
+      const phoneOk = document.getElementById("phone-success");
+      if (!/^010\d{8}$/.test(raw)) {
+        phoneErr.textContent = "올바른 번호 입력 (예: 010-1234-5678)"; return;
+      }
+      if (window._attemptId === "admin_test") {
+        phoneOk.textContent = "✅ [관리자 테스트] 실제 저장 안됨";
+        document.querySelector(".submit-btn").disabled = true; return;
+      }
+      try {
+        await updateDoc(doc(db, "winners", window._attemptId), { phone: raw });
+        document.querySelector(".submit-btn").disabled = true;
+        document.getElementById("phone-input").disabled = true;
+        phoneOk.textContent = "✅ 접수 완료! 담당자가 곧 연락드립니다.";
+      } catch (e) {
+        phoneErr.textContent = "제출 실패. 다시 시도해주세요.";
+      }
+    };
+
+    // =============================================
+    // 🖥️ 화면 전환
+    // =============================================
+    window.showFound = (id) => {
+      window._attemptId = id;
+      toggle("start-screen", false); toggle("result", true); toggle("result-found", true);
+    };
+    window.showEmpty = () => {
+      toggle("start-screen", false); toggle("result", true); toggle("result-empty", true);
+    };
+    window.showAlready = () => {
+      toggle("start-screen", false); toggle("result", true); toggle("result-already", true);
+    };
+    const toggle = (id, show) => {
+      document.getElementById(id).style.display = show ? "block" : "none";
+    };
+  </script>
 </body>
+
 </html>
