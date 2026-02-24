@@ -434,19 +434,33 @@
 
           try {
             logMsg("기기 식별 중...");
-            let fpId;
-            try {
-              const fp = await FingerprintJS.load();
-              const res = await fp.get();
-              fpId = res.visitorId;
-            } catch (fpErr) {
-              logMsg("식별 라이브러리 무시 (폴백)", true);
-              fpId = 'fallback_' + Math.random().toString(36).substr(2, 9);
-            }
+
+            // [개선] 브라우저 저장소(localStorage)를 활용한 영구 식별자 로직
+            const getPersistentId = async () => {
+              // 1. 이미 저장된 ID가 있는지 확인
+              let savedId = localStorage.getItem('treasure_hunt_v2_id');
+              if (savedId) return savedId;
+
+              // 2. 라이브러리 시도
+              try {
+                const fp = await FingerprintJS.load();
+                const res = await fp.get();
+                savedId = res.visitorId;
+              } catch (e) {
+                // 3. 실패 시 랜덤 생성 후 저장 (이제 새로고침해도 안 바뀜)
+                savedId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+              }
+
+              localStorage.setItem('treasure_hunt_v2_id', savedId);
+              return savedId;
+            };
+
+            const fpId = await getPersistentId();
             logMsg("ID: " + fpId.substr(0, 8));
 
             const isAdmin = getCookie("admin_auth");
-            if (!isAdmin && getCookie(`visited_${locationId}`)) {
+            // [중복 체크 강화] 쿠키 + 로컬스토리지 복합 체크
+            if (!isAdmin && (getCookie(`visited_${locationId}`) || localStorage.getItem(`voted_${locationId}`))) {
               showAlready(); loader.style.display = "none"; return;
             }
 
@@ -488,7 +502,10 @@
             });
 
             loader.style.display = "none";
-            if (!isAdmin) setCookie(`visited_${locationId}`, "1", 365);
+            if (!isAdmin) {
+              setCookie(`visited_${locationId}`, "1", 365);
+              localStorage.setItem(`voted_${locationId}`, "true");
+            }
 
           } catch (e) {
             logMsg(e.message, true);
