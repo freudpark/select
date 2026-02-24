@@ -263,7 +263,7 @@
       <!-- 경기교육 로고 이미지 (Base64 내장) -->
       <img class="top-logo" id="top-logo" src="geo.png" alt="경기교육" />
 
-      <div class="loc-badge" id="loc-label">📍 구역 로딩중...</div>
+      <div class="loc-badge" id="loc-label">📍 준비 중...</div>
       <p class="sub">이 곳에 보물이 숨겨져 있을지도 모릅니다.<br />버튼을 눌러 지금 확인해 보세요!</p>
 
       <!-- 진행 현황 -->
@@ -282,7 +282,7 @@
       <button class="btn" id="find-btn" onclick="findTreasure()">🔍 보물 찾기</button>
       <p class="error-msg" id="error-msg"></p>
 
-      <!-- 상세 진단 로그 (평소 숨김, 에러 시 표시) -->
+      <!-- 상세 진단 로그 (평소 숨김, 에러 시에만 개발자 확인용으로 표시 가능) -->
       <div id="debug-log"
         style="display:none; font-size:10px; color:#888; margin-top:10px; text-align:left; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; border:1px solid #444; max-height:100px; overflow-y:auto;">
         <strong>[시스템 로그]</strong><br>
@@ -377,7 +377,8 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         logMsg("서버 연결 완료.");
-        document.getElementById("progress-text").textContent = "연결 완료 (데이터 대기)";
+        // UI 로우레벨 피드백 원하시면 주석 해제 가능
+        // document.getElementById("progress-text").textContent = "연결 완료"; 
 
         const TREASURE_MAP = {
           "A1": { name: "pyhgoshift", hasTreasure: true },
@@ -404,7 +405,7 @@
         const MAX_WINNERS = 10;
 
         const locationId = new URLSearchParams(window.location.search).get("loc") || "default";
-        const config = TREASURE_MAP[locationId] || { name: locationId + "구역", hasTreasure: false };
+        const config = TREASURE_MAP[locationId] || { name: (locationId === "default" ? "이벤트" : locationId) + " 구역", hasTreasure: false };
         document.getElementById("loc-label").textContent = "📍 " + config.name;
 
         // 실시간 당첨 현황
