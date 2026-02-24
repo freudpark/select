@@ -427,146 +427,169 @@
 
         // 보물 찾기 실행함수 정의
         window.findTreasure = async () => {
-          const btn = document.getElementById("find-btn");
-          const loader = document.getElementById("loader");
-          const errMsg = document.getElementById("error-msg");
-          btn.disabled = true;
-          loader.style.display = "block";
-          errMsg.textContent = "";
+          window.findTreasure = async () => {
+            const btn = document.getElementById("find-btn");
+            const loader = document.getElementById("loader");
+            const errMsg = document.getElementById("error-msg");
+            if (btn.disabled) return; // 이미 실행 중이면 무시
+            btn.disabled = true; // [보안] 클릭 즉시 비활성화
+            loader.style.display = "block";
+            errMsg.textContent = "";
 
-          try {
-            logMsg("기기 식별 중...");
-
-            // [개선] 브라우저 저장소(localStorage)를 활용한 영구 식별자 로직
-            const getPersistentId = async () => {
-              // 1. 이미 저장된 ID가 있는지 확인
-              let savedId = localStorage.getItem('treasure_hunt_v2_id');
-              if (savedId) return savedId;
-
-              // 2. 라이브러리 시도
-              try {
-                const fp = await FingerprintJS.load();
-                const res = await fp.get();
-                savedId = res.visitorId;
-              } catch (e) {
-                // 3. 실패 시 랜덤 생성 후 저장 (이제 새로고침해도 안 바뀜)
-                savedId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            try {
+              const locationId = location.search.split('loc=')[1]?.split('&')[0] || 'default';
+              const config = TREASURE_ZONES.find(z => z.id === locationId);
+              if (!config) {
+                showError("존재하지 않는 구역입니다.");
+                btn.disabled = false;
+                loader.style.display = "none";
+                return;
               }
 
-              localStorage.setItem('treasure_hunt_v2_id', savedId);
-              return savedId;
-            };
+              const isAdmin = getCookie("admin_auth");
+              const urlParams = new URLSearchParams(window.location.search);
+              const isForceWin = isAdmin && urlParams.get('forceWin') === 'true';
 
-            const fpId = await getPersistentId();
-            logMsg("기기 식별 완료: " + fpId.substr(0, 8));
+              // [가드] 이미 참여한 기록이 있는지 로컬 체크 (관리자 테스트 제외)
+              if (!isAdmin && (getCookie(`visited_${locationId}`) || localStorage.getItem(`voted_${locationId}`))) {
+                showAlready();
+                loader.style.display = "none";
+                return;
+              }
 
-            const isAdmin = getCookie("admin_auth");
-            // [검증 강화] 로컬 스토리지와 서버 데이터를 이중으로 체크
-            const visitorKey = isAdmin ? `admin_test_${Date.now()}` : `${locationId}_${fpId}`;
-            const visitorRef = db.collection("visitors").doc(visitorKey);
-            const globalRef = db.collection("global").doc("stats");
+              const fpId = await (async () => {
+                let id = localStorage.getItem('treasure_hunt_v2_id');
+                if (id) return id;
+                try {
+                  const fp = await FingerprintJS.load();
+                  const res = await fp.get();
+                  id = res.visitorId;
+                } catch (e) {
+                  id = 'u_' + Math.random().toString(36).substr(2, 9);
+                }
+                localStorage.setItem('treasure_hunt_v2_id', id);
+                return id;
+              })();
 
-            // 1차 클라이언트 사이드 가드
-            if (!isAdmin && (getCookie(`visited_${locationId}`) || localStorage.getItem(`voted_${locationId}`))) {
-              showAlready(); loader.style.display = "none"; return;
+              const visitorKey = isAdmin ? `admin_test_${Date.now()}` : `${locationId}_${fpId}`;
+              const visitorRef = db.collection("visitors").doc(visitorKey);
+              const globalRef = db.collection("global").doc("stats");
+
+              logMsg("결과 확인 중...");
+              await firebase.firestore().runTransaction(async (t) => {
+                const visitorSnap = await t.get(visitorRef);
+                const globalSnap = await t.get(globalRef);
+
+                if (!isAdmin && visitorSnap.exists) {
+                  showAlready();
+                  throw new Error("ALREADY_PARTICIPATED");
+                }
+
+                const totalWinners = globalSnap.exists ? (globalSnap.data().totalWinners || 0) : 0;
+
+                // [중요] 모든 경로에서 markAsVoted(locationId)를 실행하여 중복 클릭 방지
+
+                // 1. 강제 당첨 모드 (관리자 전용)
+                if (isForceWin) {
+                  const testId = `test_${Date.now()}`;
+                  markAsVoted(locationId);
+                  showFound(testId);
+                  return;
+                }
+
+                // 2. 꽝인 경우
+                if (!config.hasTreasure) {
+                  if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "empty" });
+                  markAsVoted(locationId);
+                  showEmpty();
+                  return;
+                }
+
+                // 3. 당첨 제한 도달
+                if (totalWinners >= MAX_WINNERS) {
+                  if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "late" });
+                  markAsVoted(locationId);
+                  showEmpty();
+                  return;
+                }
+
+                // 4. 🎉 정식 당첨!
+                const attemptId = `${locationId}_${Date.now()}`;
+                if (!isAdmin) {
+                  t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "found", attemptId });
+                  t.set(db.collection("winners").doc(attemptId), {
+                    attemptId, fpId, locationId,
+                    locationName: config.name,
+                    phone: null, ts: firebase.firestore.FieldValue.serverTimestamp()
+                  });
+                  t.set(globalRef, { totalWinners: totalWinners + 1 }, { merge: true });
+                }
+                markAsVoted(locationId);
+                showFound(isAdmin ? "admin_test" : attemptId);
+              });
+
+              loader.style.display = "none";
+
+            } catch (e) {
+              if (e.message !== "ALREADY_PARTICIPATED") {
+                console.error(e);
+                errMsg.textContent = "⚠️ 오류 발생. 다시 시도해 주세요.";
+                btn.disabled = false;
+              }
+              loader.style.display = "none";
             }
+          };
 
-            // 2차 서버 사이드 가드 (트랜잭션 내부에서 더 엄격하게 체크)
-            logMsg("서버 데이터 확인 중...");
-            await firebase.firestore().runTransaction(async (t) => {
-              const visitorSnap = await t.get(visitorRef);
-              const globalSnap = await t.get(globalRef);
+          function markAsVoted(locId) {
+            setCookie(`visited_${locId}`, "1", 365);
+            localStorage.setItem(`voted_${locId}`, "true");
+          }
 
-              if (!isAdmin && visitorSnap.exists) {
-                logMsg("이미 참여한 기록 발견", true);
-                showAlready(); throw new Error("ALREADY_PARTICIPATED");
-              }
+          window.formatPhone = (target) => {
+            target.value = target.value
+              .replace(/[^0-9]/g, "")
+              .replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, `$1-$2-$3`);
+          };
 
-              const totalWinners = globalSnap.exists ? (globalSnap.data().totalWinners || 0) : 0;
-
-              if (!config.hasTreasure) {
-                if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "empty" });
-                showEmpty(); return;
-              }
-              if (totalWinners >= MAX_WINNERS) {
-                if (!isAdmin) t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "late" });
-                showEmpty(); return;
-              }
-
-              // 🎉 당첨!
-              const attemptId = `${locationId}_${Date.now()}`;
-              if (!isAdmin) {
-                t.set(visitorRef, { fpId, locationId, ts: firebase.firestore.FieldValue.serverTimestamp(), result: "found", attemptId });
-                t.set(db.collection("winners").doc(attemptId), {
-                  attemptId, fpId, locationId,
-                  locationName: config.name,
-                  phone: null, ts: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                t.set(globalRef, { totalWinners: totalWinners + 1 }, { merge: true });
-              }
-              showFound(isAdmin ? "admin_test" : attemptId);
-            });
-
-            loader.style.display = "none";
-            if (!isAdmin) {
-              setCookie(`visited_${locationId}`, "1", 365);
-              localStorage.setItem(`voted_${locationId}`, "true");
+          window.submitPhone = async () => {
+            const raw = document.getElementById("phone-input").value.replace(/-/g, "");
+            const phoneErr = document.getElementById("phone-error");
+            const phoneOk = document.getElementById("phone-success");
+            if (!/^010\d{8}$/.test(raw)) {
+              phoneErr.textContent = "올바른 번호 입력 (예: 010-1234-5678)"; return;
             }
+            if (window._attemptId === "admin_test") {
+              phoneOk.textContent = "✅ [관리자 테스트] 실제 저장 안됨";
+              document.querySelector(".submit-btn").disabled = true; return;
+            }
+            try {
+              await db.collection("winners").doc(window._attemptId).update({ phone: raw });
+              document.querySelector(".submit-btn").disabled = true;
+              document.getElementById("phone-input").disabled = true;
+              phoneOk.textContent = "✅ 접수 완료! 곧 연락드립니다.";
+            } catch (e) {
+              logMsg("제출 오류: " + e.message, true);
+              phoneErr.textContent = "제출 실패. 다시 시도해 주세요.";
+            }
+          };
 
-          } catch (e) {
-            logMsg(e.message, true);
-            loader.style.display = "none";
-            errMsg.textContent = "⚠️ 오류 발생. 다시 시도해 주세요.";
-            btn.disabled = false;
-            alert("진단정보:\n" + e.message + "\n(Firebase 설정이나 도메인 권한을 확인해주세요)");
-          }
-        };
+          window.showFound = (id) => {
+            window._attemptId = id;
+            toggle("start-screen", false); toggle("result", true); toggle("result-found", true);
+          };
+          window.showEmpty = () => {
+            toggle("start-screen", false); toggle("result", true); toggle("result-empty", true);
+          };
+          window.showAlready = () => {
+            toggle("start-screen", false); toggle("result", true); toggle("result-already", true);
+          };
+          const toggle = (id, show) => { document.getElementById(id).style.display = show ? "block" : "none"; };
 
-        window.formatPhone = (target) => {
-          target.value = target.value
-            .replace(/[^0-9]/g, "")
-            .replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, `$1-$2-$3`);
-        };
-
-        window.submitPhone = async () => {
-          const raw = document.getElementById("phone-input").value.replace(/-/g, "");
-          const phoneErr = document.getElementById("phone-error");
-          const phoneOk = document.getElementById("phone-success");
-          if (!/^010\d{8}$/.test(raw)) {
-            phoneErr.textContent = "올바른 번호 입력 (예: 010-1234-5678)"; return;
-          }
-          if (window._attemptId === "admin_test") {
-            phoneOk.textContent = "✅ [관리자 테스트] 실제 저장 안됨";
-            document.querySelector(".submit-btn").disabled = true; return;
-          }
-          try {
-            await db.collection("winners").doc(window._attemptId).update({ phone: raw });
-            document.querySelector(".submit-btn").disabled = true;
-            document.getElementById("phone-input").disabled = true;
-            phoneOk.textContent = "✅ 접수 완료! 곧 연락드립니다.";
-          } catch (e) {
-            logMsg("제출 오류: " + e.message, true);
-            phoneErr.textContent = "제출 실패. 다시 시도해 주세요.";
-          }
-        };
-
-        window.showFound = (id) => {
-          window._attemptId = id;
-          toggle("start-screen", false); toggle("result", true); toggle("result-found", true);
-        };
-        window.showEmpty = () => {
-          toggle("start-screen", false); toggle("result", true); toggle("result-empty", true);
-        };
-        window.showAlready = () => {
-          toggle("start-screen", false); toggle("result", true); toggle("result-already", true);
-        };
-        const toggle = (id, show) => { document.getElementById(id).style.display = show ? "block" : "none"; };
-
-        logMsg("준비 완료.");
-      } catch (err) {
-        logMsg(err.message, true);
-      }
-    })();
+          logMsg("준비 완료.");
+        } catch (err) {
+          logMsg(err.message, true);
+        }
+      }) ();
   </script>
 
 </body>
